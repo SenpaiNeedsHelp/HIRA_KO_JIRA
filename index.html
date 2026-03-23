@@ -1,0 +1,191 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Habit Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="styles.css" />
+  </head>
+  <body>
+    <div class="page-bg"></div>
+    <header class="topbar">
+      <div class="container topbar-inner">
+        <div class="brand">
+          <span class="brand-badge">H</span>
+          <span class="brand-name">Habit Tracker</span>
+        </div>
+
+        <nav class="top-nav" aria-label="Primary">
+          <button class="nav-btn active" type="button" role="tab" aria-selected="true" aria-controls="view-dashboard" data-view="dashboard">
+            <span aria-hidden="true">⌂</span>
+            <span>Dashboard</span>
+          </button>
+          <button class="nav-btn" type="button" role="tab" aria-selected="false" aria-controls="view-habits" data-view="habits">
+            <span aria-hidden="true">☰</span>
+            <span>Habits</span>
+          </button>
+          <button class="nav-btn" type="button" role="tab" aria-selected="false" aria-controls="view-calendar" data-view="calendar">
+            <span aria-hidden="true">◷</span>
+            <span>Calendar</span>
+          </button>
+          <button class="nav-btn" type="button" role="tab" aria-selected="false" aria-controls="view-profile" data-view="profile">
+            <span aria-hidden="true">◌</span>
+            <span>Profile</span>
+          </button>
+        </nav>
+
+        <div class="topbar-right">
+          <span class="level-pill">Lv 1 <span class="muted">0 XP</span></span>
+          <button class="icon-btn theme-toggle" id="theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
+            <span class="theme-icon" aria-hidden="true">🌙</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container main-shell">
+      <section id="view-dashboard" class="view active" role="tabpanel" aria-label="Dashboard view">
+        <div class="heading-block">
+          <h1>Dashboard</h1>
+          <p>Welcome back, user!</p>
+        </div>
+
+        <div class="stats-grid">
+          <article class="card stat-card">
+            <div class="stat-top">
+              <h3>Active Habits</h3>
+              <span class="dot dot-blue"></span>
+            </div>
+            <p class="stat-value">0</p>
+            <p class="stat-sub">0 total</p>
+          </article>
+
+          <article class="card stat-card">
+            <div class="stat-top">
+              <h3>Current Streak</h3>
+              <span class="dot dot-orange"></span>
+            </div>
+            <p class="stat-value">0</p>
+            <p class="stat-sub">Best: 0 days</p>
+          </article>
+
+          <article class="card stat-card">
+            <div class="stat-top">
+              <h3>Completion Rate</h3>
+              <span class="dot dot-green"></span>
+            </div>
+            <p class="stat-value">0%</p>
+            <p class="stat-sub">Last 30 days</p>
+          </article>
+
+          <article class="card stat-card">
+            <div class="stat-top">
+              <h3>Today's Progress</h3>
+              <span class="dot dot-violet"></span>
+            </div>
+            <p class="stat-value">0%</p>
+            <p class="stat-sub">0/0 completed</p>
+          </article>
+        </div>
+
+        <div class="charts-grid">
+          <article class="card chart-card">
+            <h3>Weekly Overview</h3>
+            <div class="chart-box">
+              <canvas id="weekly-overview-chart" aria-label="Weekly overview chart" role="img"></canvas>
+            </div>
+          </article>
+
+          <article class="card chart-card">
+            <h3>7-Day Trend</h3>
+            <div class="chart-box">
+              <canvas id="trend-chart" aria-label="7-day trend chart" role="img"></canvas>
+            </div>
+          </article>
+        </div>
+
+        <article class="card habits-panel">
+          <div class="panel-head">
+            <div>
+              <h3>Today's Habits</h3>
+              <p>Monday, March 23, 2026</p>
+            </div>
+            <button class="btn-primary" type="button">+ New Habit</button>
+          </div>
+
+          <div class="empty-state">
+            <div class="calendar-icon">📅</div>
+            <h4>No habits yet</h4>
+            <p>Create your first habit to get started!</p>
+            <button class="btn-primary" type="button">+ New Habit</button>
+          </div>
+        </article>
+      </section>
+
+      <section id="view-habits" class="view" role="tabpanel" aria-label="Habits view" hidden>
+        <div class="heading-row">
+          <div class="heading-block">
+            <h1>My Habits</h1>
+            <p>Manage and organize your habits</p>
+          </div>
+          <button class="btn-primary" type="button">+ New Habit</button>
+        </div>
+
+        <article class="card filters-card">
+          <div class="field-grid">
+            <label class="field">
+              <span>Filter by Category</span>
+              <select>
+                <option>All Categories</option>
+                <option>Health</option>
+                <option>Study</option>
+                <option>Work</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Sort by</span>
+              <select>
+                <option>Custom Order</option>
+                <option>Name</option>
+                <option>Newest</option>
+                <option>Longest Streak</option>
+              </select>
+            </label>
+          </div>
+        </article>
+
+        <div class="tabs-row">
+          <button class="chip active" type="button" aria-pressed="true">Active (0)</button>
+          <button class="chip" type="button" aria-pressed="false">Archived (0)</button>
+        </div>
+
+        <article class="card habits-empty-panel">
+          <div class="empty-state compact">
+            <p>No active habits yet</p>
+            <button class="btn-primary" type="button">Create Your First Habit</button>
+          </div>
+        </article>
+      </section>
+
+      <section id="view-calendar" class="view fake-view" role="tabpanel" aria-label="Calendar view" hidden>
+        <h2>Calendar</h2>
+        <p>WIP</p>
+      </section>
+
+      <section id="view-profile" class="view fake-view" role="tabpanel" aria-label="Profile view" hidden>
+        <h2>Profile</h2>
+        <p>WIP</p>
+      </section>
+    </main>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="script.js"></script>
+  </body>
+</html>
