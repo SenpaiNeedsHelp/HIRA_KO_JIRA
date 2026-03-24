@@ -84,8 +84,9 @@ body {
 }
 
 .container {
-  width: min(860px, 92vw);
+  width: min(1400px, 95vw);
   margin: 0 auto;
+  padding: 0 20px;
 }
 
 .topbar {
@@ -212,7 +213,7 @@ body {
 }
 
 .main-shell {
-  padding: 20px 0 34px;
+  padding: 32px 0 34px;
 }
 
 .view {
@@ -236,8 +237,12 @@ body {
   font-weight: 800;
 }
 
+.heading-block {
+  margin-bottom: 24px;
+}
+
 .heading-block p {
-  margin: 4px 0 0;
+  margin: 8px 0 0;
   color: var(--muted-strong);
   font-size: 18px;
   font-weight: 500;
@@ -262,13 +267,13 @@ body {
 .stats-grid {
   margin-top: 18px;
   display: grid;
-  grid-template-columns: repeat(4, 1fr);
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
   gap: 14px;
 }
 
 .stat-card {
   min-height: 120px;
-  padding: 14px 16px;
+  padding: 18px 20px;
 }
 
 .stat-card.is-animating {
@@ -333,12 +338,12 @@ body {
 .charts-grid {
   margin-top: 16px;
   display: grid;
-  grid-template-columns: 1fr 1fr;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr));
   gap: 16px;
 }
 
 .chart-card {
-  padding: 14px 16px 12px;
+  padding: 18px 20px 16px;
 }
 
 .chart-card h3 {
@@ -624,7 +629,7 @@ select:focus-visible {
   }
 
   .stats-grid {
-    grid-template-columns: repeat(2, 1fr);
+    grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
   }
 
   .charts-grid {
