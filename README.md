@@ -1,6 +1,6 @@
 # HIRA_KO_JIRA
 # 1. Clone the repo (first time only)
-git clone https://github.com/your-username/team-website.git
+https://github.com/SenpaiNeedsHelp/HIRA_KO_JIRA
 
 # 2. Before starting work, always pull latest changes
 git pull origin main
