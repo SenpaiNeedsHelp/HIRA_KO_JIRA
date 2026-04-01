@@ -1,0 +1,122 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>API Test</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }
+        button { margin: 5px; padding: 10px 20px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        button:hover { background: #45a049; }
+        .result { background: #f4f4f4; padding: 15px; margin: 10px 0; border-radius: 4px; }
+        .error { background: #ffebee; color: #c62828; }
+        .success { background: #e8f5e9; color: #2e7d32; }
+        h3 { margin-top: 20px; }
+    </style>
+</head>
+<body>
+    <h1>Habit Tracker API Test</h1>
+
+    <h3>1. Login Test</h3>
+    <button onclick="testLogin()">Test Login (demo@habittracker.com)</button>
+    <div id="login-result" class="result"></div>
+
+    <h3>2. Dashboard Stats Test</h3>
+    <button onclick="testDashboard()">Get Dashboard Stats</button>
+    <div id="dashboard-result" class="result"></div>
+
+    <h3>3. Habits List Test</h3>
+    <button onclick="testHabits()">Get Habits List</button>
+    <div id="habits-result" class="result"></div>
+
+    <h3>4. Toggle Completion Test</h3>
+    <button onclick="testToggle()">Toggle First Habit (Today)</button>
+    <div id="toggle-result" class="result"></div>
+
+    <h3>5. Logout Test</h3>
+    <button onclick="testLogout()">Test Logout</button>
+    <div id="logout-result" class="result"></div>
+
+    <script>
+        const API_BASE = '/jira/api';
+
+        async function apiRequest(endpoint, method = 'GET', data = null) {
+            try {
+                const options = {
+                    method,
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    credentials: 'same-origin'
+                };
+
+                if (data) {
+                    options.body = JSON.stringify(data);
+                }
+
+                const response = await fetch(API_BASE + endpoint, options);
+                const result = await response.json();
+                return result;
+            } catch (error) {
+                return { success: false, message: error.message };
+            }
+        }
+
+        async function testLogin() {
+            const result = await apiRequest('/auth/login.php', 'POST', {
+                email: 'demo@habittracker.com',
+                password: 'password123'
+            });
+
+            const el = document.getElementById('login-result');
+            el.className = 'result ' + (result.success ? 'success' : 'error');
+            el.innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+        }
+
+        async function testDashboard() {
+            const result = await apiRequest('/stats/dashboard.php');
+
+            const el = document.getElementById('dashboard-result');
+            el.className = 'result ' + (result.success ? 'success' : 'error');
+            el.innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+        }
+
+        async function testHabits() {
+            const result = await apiRequest('/habits/list.php');
+
+            const el = document.getElementById('habits-result');
+            el.className = 'result ' + (result.success ? 'success' : 'error');
+            el.innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+        }
+
+        async function testToggle() {
+            // First get habits to get a habit ID
+            const habitsResult = await apiRequest('/habits/list.php');
+
+            if (habitsResult.success && habitsResult.habits.length > 0) {
+                const firstHabit = habitsResult.habits[0];
+                const today = new Date().toISOString().split('T')[0];
+
+                const result = await apiRequest('/completions/toggle.php', 'POST', {
+                    habit_id: firstHabit.id,
+                    date: today,
+                    status: 'completed'
+                });
+
+                const el = document.getElementById('toggle-result');
+                el.className = 'result ' + (result.success ? 'success' : 'error');
+                el.innerHTML = '<pre>Toggling habit: ' + firstHabit.name + '\n\n' + JSON.stringify(result, null, 2) + '</pre>';
+            } else {
+                document.getElementById('toggle-result').innerHTML = '<pre>No habits found. Please create a habit first.</pre>';
+            }
+        }
+
+        async function testLogout() {
+            const result = await apiRequest('/auth/logout.php', 'POST');
+
+            const el = document.getElementById('logout-result');
+            el.className = 'result ' + (result.success ? 'success' : 'error');
+            el.innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+        }
+    </script>
+</body>
+</html>

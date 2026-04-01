@@ -1,0 +1,444 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Habit Tracker</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Manrope:wght@400;500;600;700;800&family=Space+Grotesk:wght@500;700&display=swap"
+      rel="stylesheet"
+    />
+    <link rel="stylesheet" href="assets/css/styles.css" />
+  </head>
+  <body data-page="dashboard">
+    <div class="page-bg"></div>
+
+    <header class="topbar">
+      <div class="container topbar-inner">
+        <div class="brand">
+          <span class="brand-badge">H</span>
+          <span class="brand-name">Habit Tracker</span>
+        </div>
+
+        <nav class="top-nav" aria-label="Primary">
+          <button class="nav-btn active" type="button" role="tab" aria-selected="true" aria-controls="view-dashboard" data-view="dashboard">
+            <span aria-hidden="true">⌂</span>
+            <span>Dashboard</span>
+          </button>
+          <button class="nav-btn" type="button" role="tab" aria-selected="false" aria-controls="view-habits" data-view="habits">
+            <span aria-hidden="true">☰</span>
+            <span>Habits</span>
+          </button>
+          <button class="nav-btn" type="button" role="tab" aria-selected="false" aria-controls="view-calendar" data-view="calendar">
+            <span aria-hidden="true">◷</span>
+            <span>Calendar</span>
+          </button>
+          <button class="nav-btn" type="button" role="tab" aria-selected="false" aria-controls="view-profile" data-view="profile">
+            <span aria-hidden="true">◌</span>
+            <span>Profile</span>
+          </button>
+        </nav>
+
+        <div class="topbar-right">
+          <span class="level-pill">Lv 1 <span class="muted">0 XP</span></span>
+          <button class="icon-btn theme-toggle" id="theme-toggle" aria-label="Switch to dark mode" aria-pressed="false">
+            <span class="theme-icon" aria-hidden="true">🌙</span>
+          </button>
+        </div>
+      </div>
+    </header>
+
+    <main class="container main-shell">
+      <section id="view-dashboard" class="view active" role="tabpanel" aria-label="Dashboard view">
+        <div class="heading-block">
+          <h1>Dashboard</h1>
+          <p>Welcome back, <span id="dash-username">User</span>!</p>
+        </div>
+
+        <div class="stats-grid">
+          <article class="card stat-card">
+            <div class="stat-top">
+              <h3>Active Habits</h3>
+              <span class="dot dot-blue"></span>
+            </div>
+            <p class="stat-value">0</p>
+            <p class="stat-sub">0 total</p>
+          </article>
+
+          <article class="card stat-card">
+            <div class="stat-top">
+              <h3>Current Streak</h3>
+              <span class="dot dot-orange"></span>
+            </div>
+            <p class="stat-value">0</p>
+            <p class="stat-sub">Best: 0 days</p>
+          </article>
+
+          <article class="card stat-card">
+            <div class="stat-top">
+              <h3>Completion Rate</h3>
+              <span class="dot dot-green"></span>
+            </div>
+            <p class="stat-value">0%</p>
+            <p class="stat-sub">Last 30 days</p>
+          </article>
+
+          <article class="card stat-card">
+            <div class="stat-top">
+              <h3>Today's Progress</h3>
+              <span class="dot dot-violet"></span>
+            </div>
+            <p class="stat-value">0%</p>
+            <p class="stat-sub">0/0 completed</p>
+          </article>
+        </div>
+
+        <div class="charts-grid">
+          <article class="card chart-card">
+            <h3>Weekly Overview</h3>
+            <div class="chart-box">
+              <canvas id="weekly-overview-chart" aria-label="Weekly overview chart" role="img"></canvas>
+            </div>
+          </article>
+
+          <article class="card chart-card">
+            <h3>7-Day Trend</h3>
+            <div class="chart-box">
+              <canvas id="trend-chart" aria-label="7-day trend chart" role="img"></canvas>
+            </div>
+          </article>
+        </div>
+
+        <article class="card habits-panel">
+          <div class="panel-head">
+            <div>
+              <h3>Today's Habits</h3>
+              <p>Monday, March 23, 2026</p>
+            </div>
+            <button class="btn-primary" type="button">+ New Habit</button>
+          </div>
+
+          <div class="empty-state">
+            <div class="calendar-icon">📅</div>
+            <h4>No habits yet</h4>
+            <p>Create your first habit to get started!</p>
+            <button class="btn-primary" type="button">+ New Habit</button>
+          </div>
+        </article>
+      </section>
+
+      <section id="view-habits" class="view" role="tabpanel" aria-label="Habits view" hidden>
+        <div class="heading-row">
+          <div class="heading-block">
+            <h1>My Habits</h1>
+            <p>Manage and organize your habits</p>
+          </div>
+          <button class="btn-primary" type="button">+ New Habit</button>
+        </div>
+
+        <article class="card filters-card">
+          <div class="field-grid">
+            <label class="field">
+              <span>Filter by Category</span>
+              <select>
+                <option>All Categories</option>
+                <option>Health</option>
+                <option>Study</option>
+                <option>Work</option>
+              </select>
+            </label>
+
+            <label class="field">
+              <span>Sort by</span>
+              <select>
+                <option>Custom Order</option>
+                <option>Name</option>
+                <option>Newest</option>
+                <option>Longest Streak</option>
+              </select>
+            </label>
+          </div>
+        </article>
+
+        <div class="tabs-row">
+          <button class="chip active" type="button" aria-pressed="true">Active (0)</button>
+          <button class="chip" type="button" aria-pressed="false">Archived (0)</button>
+        </div>
+
+        <article class="card habits-empty-panel">
+          <div class="empty-state compact">
+            <p>No active habits yet</p>
+            <button class="btn-primary" type="button">Create Your First Habit</button>
+          </div>
+        </article>
+      </section>
+
+      <section id="view-calendar" class="view" role="tabpanel" aria-label="Calendar view" hidden>
+        <div class="heading-block">
+          <h1>Calendar</h1>
+          <p>Track your habit completion history</p>
+        </div>
+
+        <div class="tabs-row">
+          <button class="chip active" id="cal-tab-heatmap" type="button" aria-pressed="true">Heatmap</button>
+          <button class="chip" id="cal-tab-month" type="button" aria-pressed="false">Month View</button>
+          <button class="chip" id="cal-tab-week" type="button" aria-pressed="false">Week View</button>
+        </div>
+
+        <!-- Heatmap -->
+        <article class="card cal-panel" id="cal-panel-heatmap">
+          <h3 class="cal-panel-label">Last 90 Days</h3>
+          <div class="heatmap-grid" id="heatmap-grid"></div>
+          <div class="heatmap-legend">
+            <span class="legend-text">Less</span>
+            <div class="legend-dots">
+              <span class="legend-dot ld-0"></span>
+              <span class="legend-dot ld-1"></span>
+              <span class="legend-dot ld-2"></span>
+              <span class="legend-dot ld-3"></span>
+              <span class="legend-dot ld-4"></span>
+            </div>
+            <span class="legend-text">More</span>
+          </div>
+        </article>
+
+        <!-- Month view -->
+        <article class="card cal-panel" id="cal-panel-month" style="display:none">
+          <div class="month-nav">
+            <button class="icon-btn month-arrow" id="month-prev" aria-label="Previous month">&#8592;</button>
+            <h3 class="month-title" id="month-title"></h3>
+            <button class="icon-btn month-arrow" id="month-next" aria-label="Next month">&#8594;</button>
+          </div>
+          <div class="month-weekdays">
+            <span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span>
+          </div>
+          <div class="month-grid" id="month-grid"></div>
+          <div class="month-status-key">
+            <span class="status-key-item"><span class="status-dot s-completed"></span>Completed</span>
+            <span class="status-key-item"><span class="status-dot s-missed"></span>Missed</span>
+            <span class="status-key-item"><span class="status-dot s-pending"></span>Pending</span>
+            <span class="status-key-item"><span class="status-dot s-today"></span>Today</span>
+          </div>
+        </article>
+
+        <!-- Week view -->
+        <article class="card cal-panel" id="cal-panel-week" style="display:none">
+          <div class="month-nav">
+            <button class="icon-btn month-arrow" id="week-prev" aria-label="Previous week">&#8592;</button>
+            <h3 class="month-title" id="week-title"></h3>
+            <button class="icon-btn month-arrow" id="week-next" aria-label="Next week">&#8594;</button>
+          </div>
+          <div class="week-grid" id="week-grid"></div>
+        </article>
+
+        <!-- Selected day detail -->
+        <article class="card cal-day-panel" id="cal-day-panel">
+          <div class="cal-day-header">
+            <p class="cal-day-title" id="cal-day-title"></p>
+            <div class="day-status-badges" id="day-status-badges">
+              <span class="badge badge-green" id="day-done-badge">0 done</span>
+              <span class="badge badge-red" id="day-missed-badge">0 missed</span>
+              <span class="badge badge-muted" id="day-pending-badge">0 pending</span>
+            </div>
+          </div>
+          <div class="day-habits-list" id="day-habits-list">
+            <div class="empty-state compact"><p style="margin:0">No active habits for this date.</p></div>
+          </div>
+        </article>
+      </section>
+
+      <section id="view-profile" class="view" role="tabpanel" aria-label="Profile view" hidden>
+        <div class="heading-block">
+          <h1>Profile</h1>
+          <p>Your account, stats &amp; settings</p>
+        </div>
+
+        <!-- Hero card -->
+        <article class="card profile-hero">
+          <div class="profile-avatar-wrap">
+            <div class="profile-avatar" id="profile-avatar-display">U</div>
+            <label class="avatar-upload-btn" title="Change avatar">
+              <input type="file" id="profile-avatar-input" accept="image/*" style="display:none" />
+              <span aria-hidden="true">✎</span>
+            </label>
+          </div>
+          <div class="profile-hero-info">
+            <h2 class="profile-name" id="profile-name-display">User</h2>
+            <p class="profile-email" id="profile-email-display">user@email.com</p>
+            <p class="profile-since">Member since March 2026</p>
+            <div class="profile-badges">
+              <span class="badge badge-brand">Lv <span id="profile-level-badge">1</span></span>
+              <span class="badge badge-muted"><span id="profile-xp-badge">0</span> XP</span>
+              <span class="badge badge-orange">0 day streak 🔥</span>
+            </div>
+          </div>
+          <button class="btn-primary profile-edit-btn" id="profile-edit-btn" type="button">Edit Profile</button>
+        </article>
+
+        <!-- Edit form -->
+        <article class="card profile-edit-card" id="profile-edit-card" style="display:none">
+          <h3>Edit Profile</h3>
+          <div class="field-grid">
+            <label class="field">
+              <span>Display Name <span class="field-required">*</span></span>
+              <input type="text" id="edit-name" placeholder="Your name" maxlength="32" />
+              <span class="field-error" id="err-name"></span>
+            </label>
+            <label class="field">
+              <span>Email <span class="field-required">*</span></span>
+              <input type="email" id="edit-email" placeholder="you@email.com" />
+              <span class="field-error" id="err-email"></span>
+            </label>
+            <label class="field">
+              <span>New Password</span>
+              <input type="password" id="edit-password" placeholder="Leave blank to keep current" />
+              <span class="field-error" id="err-password"></span>
+            </label>
+            <label class="field">
+              <span>Confirm Password</span>
+              <input type="password" id="edit-password-confirm" placeholder="Repeat new password" />
+              <span class="field-error" id="err-password-confirm"></span>
+            </label>
+          </div>
+          <div class="profile-edit-actions">
+            <button class="btn-primary" id="profile-save-btn" type="button">Save Changes</button>
+            <button class="btn-ghost" id="profile-cancel-btn" type="button">Cancel</button>
+          </div>
+        </article>
+
+        <!-- XP bar -->
+        <article class="card profile-xp-card">
+          <div class="xp-head">
+            <h3>Level Progress</h3>
+            <span class="badge badge-brand">Lv <span id="xp-level">1</span></span>
+          </div>
+          <div class="xp-bar-wrap">
+            <div class="xp-bar-track">
+              <div class="xp-bar-fill" id="xp-bar" style="width:0%"></div>
+            </div>
+            <span class="xp-label" id="xp-label">0 / 100 XP</span>
+          </div>
+          <p class="stat-sub">Complete habits daily to earn XP and level up!</p>
+        </article>
+
+        <!-- Activity stats -->
+        <div class="stats-grid">
+          <article class="card stat-card">
+            <div class="stat-top"><h3>Total Habits</h3><span class="dot dot-blue"></span></div>
+            <p class="stat-value" id="ps-total">0</p><p class="stat-sub">created</p>
+          </article>
+          <article class="card stat-card">
+            <div class="stat-top"><h3>Best Streak</h3><span class="dot dot-orange"></span></div>
+            <p class="stat-value" id="ps-streak">0</p><p class="stat-sub">days in a row</p>
+          </article>
+          <article class="card stat-card">
+            <div class="stat-top"><h3>Total Done</h3><span class="dot dot-green"></span></div>
+            <p class="stat-value" id="ps-done">0</p><p class="stat-sub">completions</p>
+          </article>
+          <article class="card stat-card">
+            <div class="stat-top"><h3>Avg. Rate</h3><span class="dot dot-violet"></span></div>
+            <p class="stat-value" id="ps-rate">0%</p><p class="stat-sub">all time</p>
+          </article>
+        </div>
+
+        <!-- Preferences -->
+        <article class="card settings-card">
+          <h3>Preferences</h3>
+          <div class="settings-list">
+            <div class="settings-row">
+              <div>
+                <p class="settings-label">Dark Mode</p>
+                <p class="settings-sub">Switch between light and dark theme</p>
+              </div>
+              <button class="toggle-switch" id="profile-theme-toggle" role="switch" aria-checked="false" type="button">
+                <span class="toggle-thumb"></span>
+              </button>
+            </div>
+            <div class="settings-row">
+              <div>
+                <p class="settings-label">Notifications</p>
+                <p class="settings-sub">Daily reminders (coming soon)</p>
+              </div>
+              <button class="toggle-switch" role="switch" aria-checked="false" disabled type="button">
+                <span class="toggle-thumb"></span>
+              </button>
+            </div>
+            <div class="settings-row">
+              <div>
+                <p class="settings-label">Weekly Report</p>
+                <p class="settings-sub">Summary emails (coming soon)</p>
+              </div>
+              <button class="toggle-switch" role="switch" aria-checked="false" disabled type="button">
+                <span class="toggle-thumb"></span>
+              </button>
+            </div>
+          </div>
+        </article>
+
+        <!-- Account -->
+        <article class="card settings-card">
+          <h3>Account</h3>
+          <div class="settings-list">
+            <div class="settings-row">
+              <div>
+                <p class="settings-label">Export Data</p>
+                <p class="settings-sub">Download your habit history as JSON</p>
+              </div>
+              <button class="btn-ghost" id="export-btn" type="button">Export</button>
+            </div>
+            <div class="settings-row">
+              <div>
+                <p class="settings-label">Log Out</p>
+                <p class="settings-sub">Sign out of your account</p>
+              </div>
+              <button class="btn-ghost" id="logout-btn" type="button">Log Out</button>
+            </div>
+          </div>
+        </article>
+
+        <!-- Danger zone -->
+        <article class="card danger-card">
+          <h3>Danger Zone</h3>
+          <div class="settings-list">
+            <div class="settings-row">
+              <div>
+                <p class="settings-label">Reset All Data</p>
+                <p class="settings-sub">Permanently delete all habits and progress. This cannot be undone.</p>
+              </div>
+              <button class="btn-danger" id="reset-data-btn" type="button">Reset</button>
+            </div>
+          </div>
+        </article>
+      </section>
+
+    </main>
+
+    <!-- Heatmap tooltip -->
+    <div class="hm-tooltip" id="hm-tooltip" role="tooltip" aria-hidden="true">
+      <strong id="hm-tt-date"></strong>
+      <span id="hm-tt-habits"></span>
+      <span id="hm-tt-pct"></span>
+    </div>
+
+    <!-- Confirm modal -->
+    <div class="modal-backdrop" id="modal-backdrop" style="display:none" role="dialog" aria-modal="true">
+      <div class="modal-box">
+        <h3 id="modal-title">Are you sure?</h3>
+        <p id="modal-body">This action cannot be undone.</p>
+        <div class="modal-actions">
+          <button class="btn-danger" id="modal-confirm" type="button">Confirm</button>
+          <button class="btn-ghost" id="modal-cancel" type="button">Cancel</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Toast notification -->
+    <div class="toast" id="toast" role="status" aria-live="polite"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.3/dist/chart.umd.min.js"></script>
+    <script src="assets/js/api.js"></script>
+    <script src="assets/js/dashboard-app.js"></script>
+  </body>
+</html>
