@@ -1,0 +1,84 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Debug Dashboard</title>
+    <style>
+        body { font-family: monospace; padding: 20px; background: #1e1e1e; color: #fff; }
+        .log { background: #2d2d2d; padding: 15px; margin: 10px 0; border-radius: 8px; }
+        button { padding: 10px 20px; margin: 5px; background: #4CAF50; color: white; border: none; border-radius: 4px; cursor: pointer; }
+        .error { color: #ff5555; }
+        .success { color: #50fa7b; }
+    </style>
+</head>
+<body>
+    <h1>Dashboard Debug</h1>
+
+    <h3>Step 1: Check Session</h3>
+    <button onclick="checkSession()">Check Session</button>
+    <div id="session-log" class="log"></div>
+
+    <h3>Step 2: Load Dashboard</h3>
+    <button onclick="loadDashboard()">Load Dashboard Data</button>
+    <div id="dashboard-log" class="log"></div>
+
+    <h3>Step 3: Test Login</h3>
+    <button onclick="testLogin()">Login as Demo User</button>
+    <div id="login-log" class="log"></div>
+
+    <script src="assets/js/api.js"></script>
+    <script>
+        async function checkSession() {
+            const log = document.getElementById('session-log');
+            log.innerHTML = 'Checking session...';
+
+            const result = await HabitAPI.checkSession();
+            log.innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+
+            if (result.authenticated) {
+                log.innerHTML += '<p class="success">✓ Session is active</p>';
+            } else {
+                log.innerHTML += '<p class="error">✗ Not authenticated</p>';
+            }
+        }
+
+        async function loadDashboard() {
+            const log = document.getElementById('dashboard-log');
+            log.innerHTML = 'Loading dashboard data...';
+
+            const result = await HabitAPI.getDashboardStats();
+            log.innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+
+            if (result.success) {
+                log.innerHTML += '<p class="success">✓ Dashboard data loaded</p>';
+                log.innerHTML += '<p>Active Habits: ' + result.data.active_habits + '</p>';
+                log.innerHTML += '<p>Today Habits: ' + result.data.today_habits.length + '</p>';
+            } else {
+                log.innerHTML += '<p class="error">✗ Failed: ' + result.message + '</p>';
+            }
+        }
+
+        async function testLogin() {
+            const log = document.getElementById('login-log');
+            log.innerHTML = 'Logging in...';
+
+            const result = await HabitAPI.login('demo@habittracker.com', 'password123');
+            log.innerHTML = '<pre>' + JSON.stringify(result, null, 2) + '</pre>';
+
+            if (result.success) {
+                log.innerHTML += '<p class="success">✓ Login successful</p>';
+                setTimeout(() => {
+                    window.location.href = 'dashboard.html';
+                }, 2000);
+            } else {
+                log.innerHTML += '<p class="error">✗ Login failed: ' + result.message + '</p>';
+            }
+        }
+
+        // Auto-check on load
+        window.onload = () => {
+            checkSession();
+        };
+    </script>
+</body>
+</html>
