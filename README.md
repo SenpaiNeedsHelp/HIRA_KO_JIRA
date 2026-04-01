@@ -246,3 +246,16 @@ For issues or questions, please check the code comments or database schema docum
 ---
 
 **Built with ❤️ for building better habits**
+
+## Quick Git Workflow
+
+1. Clone the repository (first time only):
+   - https://github.com/SenpaiNeedsHelp/HIRA_KO_JIRA
+2. Pull latest changes before starting work:
+   - git pull origin main
+3. Stage your changes:
+   - git add .
+4. Commit with a clear message:
+   - git commit -m "Add navbar component"
+5. Push to GitHub:
+   - git push origin main
