@@ -5,45 +5,53 @@
  */
 
 require_once '../config/database.php';
+require_once '../utils/response.php';
 
 setCorsHeaders();
+session_start();
 
-$database = new Database();
-$db = $database->getConnection();
-
+$db = (new Database())->getConnection();
 $data = getJsonInput();
 
-// Validate input
-if (empty($data['email']) || empty($data['password'])) {
+// Validate input safely
+$email = trim($data['email'] ?? '');
+$password = $data['password'] ?? '';
+
+if (!$email || !$password) {
     sendResponse([
         'success' => false,
         'message' => 'Email and password are required'
     ], 400);
 }
 
-$email = $data['email'];
-$password = $data['password'];
+// Validate email format
+if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
+    sendResponse([
+        'success' => false,
+        'message' => 'Invalid email format'
+    ], 400);
+}
 
 try {
-    // Get user by email
-    $query = "SELECT id, email, password_hash, name, avatar, level, xp, current_streak, best_streak
+    // Fetch user
+    $query = "SELECT id, email, password_hash, name, avatar, level, xp, current_streak, best_streak, is_verified
               FROM users
-              WHERE email = :email AND is_active = TRUE";
+              WHERE email = :email AND is_active = TRUE
+              LIMIT 1";
 
     $stmt = $db->prepare($query);
-    $stmt->bindParam(':email', $email);
-    $stmt->execute();
+    $stmt->execute(['email' => $email]);
 
-    if ($stmt->rowCount() === 0) {
+    $user = $stmt->fetch(PDO::FETCH_ASSOC);
+
+    // Check user exists first, then verify password
+    if (!$user) {
         sendResponse([
             'success' => false,
             'message' => 'Invalid email or password'
         ], 401);
     }
 
-    $user = $stmt->fetch();
-
-    // Verify password
     if (!password_verify($password, $user['password_hash'])) {
         sendResponse([
             'success' => false,
@@ -51,19 +59,27 @@ try {
         ], 401);
     }
 
+    // Email verification check
+    if (!$user['is_verified']) {
+        sendResponse([
+            'success' => false,
+            'message' => 'Please verify your email before login'
+        ], 403);
+    }
+
     // Update last login
-    $updateQuery = "UPDATE users SET last_login = NOW() WHERE id = :id";
-    $updateStmt = $db->prepare($updateQuery);
-    $updateStmt->bindParam(':id', $user['id']);
-    $updateStmt->execute();
+    $updateStmt = $db->prepare("UPDATE users SET last_login = NOW() WHERE id = :id");
+    $updateStmt->execute(['id' => $user['id']]);
+
+    // Regenerate session ID to prevent session fixation
+    session_regenerate_id(true);
 
     // Start session
-    session_start();
     $_SESSION['user_id'] = $user['id'];
     $_SESSION['user_email'] = $user['email'];
     $_SESSION['user_name'] = $user['name'];
 
-    // Remove password hash from response
+    // Remove sensitive data
     unset($user['password_hash']);
 
     sendResponse([
@@ -73,9 +89,9 @@ try {
     ]);
 
 } catch (PDOException $e) {
+    error_log('Login error: ' . $e->getMessage());
     sendResponse([
         'success' => false,
-        'message' => 'Login failed: ' . $e->getMessage()
+        'message' => 'Server error'
     ], 500);
 }
-?>
