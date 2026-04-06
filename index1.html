@@ -1,0 +1,183 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Habit Tracker</title>
+
+    <link rel="stylesheet" href="assets/css/styles.css" />
+  </head>
+
+  <body data-page="auth">
+    <div class="page-bg"></div>
+
+    <section class="auth-shell">
+      <div class="auth-grid">
+
+        <!-- LEFT -->
+        <div class="auth-marketing">
+          <h1>Habit Tracker</h1>
+          <p>Build better habits, one day at a time.</p>
+        </div>
+
+        <!-- RIGHT -->
+        <article class="auth-card">
+          <h2 id="auth-title">Login</h2>
+
+          <div class="auth-toggle">
+            <button id="loginTab" class="active">Login</button>
+            <button id="signupTab">Sign Up</button>
+          </div>
+
+          <form id="authForm">
+
+            <!-- NAME -->
+            <input type="text" id="name" placeholder="Full Name" style="display:none" />
+
+            <!-- EMAIL -->
+            <input type="email" id="email" placeholder="Email" required />
+
+            <!-- PASSWORD -->
+            <input type="password" id="password" placeholder="Password" required minlength="6" />
+
+            <!-- CONFIRM PASSWORD -->
+            <input type="password" id="confirmPassword" placeholder="Re-enter Password" style="display:none" />
+
+            <button type="submit" id="submitBtn">Login</button>
+          </form>
+
+          <!-- FORGOT PASSWORD -->
+          <p id="forgotPassword" style="cursor:pointer; margin-top:10px;">
+            Forgot Password?
+          </p>
+
+          <p id="error-msg" style="color:red;"></p>
+        </article>
+
+      </div>
+    </section>
+
+    <script>
+      const API_BASE = "http://localhost/api/auth/";
+
+      let isLogin = true;
+
+      const loginTab = document.getElementById("loginTab");
+      const signupTab = document.getElementById("signupTab");
+      const form = document.getElementById("authForm");
+
+      const nameField = document.getElementById("name");
+      const confirmPasswordField = document.getElementById("confirmPassword");
+
+      const errorMsg = document.getElementById("error-msg");
+      const submitBtn = document.getElementById("submitBtn");
+
+      // Toggle Login
+      loginTab.onclick = () => {
+        isLogin = true;
+        loginTab.classList.add("active");
+        signupTab.classList.remove("active");
+
+        nameField.style.display = "none";
+        confirmPasswordField.style.display = "none";
+
+        submitBtn.textContent = "Login";
+        errorMsg.textContent = "";
+      };
+
+      // Toggle Signup
+      signupTab.onclick = () => {
+        isLogin = false;
+        signupTab.classList.add("active");
+        loginTab.classList.remove("active");
+
+        nameField.style.display = "block";
+        confirmPasswordField.style.display = "block";
+
+        submitBtn.textContent = "Sign Up";
+        errorMsg.textContent = "";
+      };
+
+      // Submit
+      form.addEventListener("submit", async (e) => {
+        e.preventDefault();
+
+        const email = document.getElementById("email").value.trim();
+        const password = document.getElementById("password").value;
+        const confirmPassword = confirmPasswordField.value;
+        const name = nameField.value.trim();
+
+        // Signup validation
+        if (!isLogin) {
+          if (!name) {
+            errorMsg.textContent = "Name is required";
+            return;
+          }
+
+          if (password !== confirmPassword) {
+            errorMsg.textContent = "Passwords do not match";
+            return;
+          }
+        }
+
+        let url = isLogin ? "login.php" : "signup.php";
+
+        let body = isLogin
+          ? { email, password }
+          : { name, email, password };
+
+        try {
+          const res = await fetch(API_BASE + url, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(body),
+          });
+
+          const data = await res.json();
+
+          if (!data.success) {
+            errorMsg.textContent = data.message;
+            return;
+          }
+
+          errorMsg.textContent = "";
+
+          if (isLogin) {
+            alert("Login successful");
+            window.location.href = "dashboard.html";
+          } else {
+            alert("Signup successful. Please verify your email.");
+          }
+
+        } catch {
+          errorMsg.textContent = "Server error";
+        }
+      });
+
+      // Forgot Password
+      document.getElementById("forgotPassword").onclick = async () => {
+        const email = prompt("Enter your email:");
+
+        if (!email) return;
+
+        try {
+          const res = await fetch(API_BASE + "forgot-password.php", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ email }),
+          });
+
+          const data = await res.json();
+          alert(data.message);
+
+          if (data.reset_link) {
+            console.log("Reset Link:", data.reset_link);
+          }
+
+        } catch {
+          alert("Error sending reset link");
+        }
+      };
+    </script>
+  </body>
+</html>
