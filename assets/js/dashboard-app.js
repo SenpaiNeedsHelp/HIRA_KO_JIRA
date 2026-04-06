@@ -300,7 +300,7 @@ function renderHabitsList(habitsList, archived) {
     }
 
     habitsGrid.innerHTML = habitsList.map(habit => `
-        <article class="card habit-card" data-habit-id="${habit.id}">
+        <article class="card habit-card" data-habit-id="${habit.id}" data-habit-name="${habit.name}">
             <div class="habit-card-header">
                 <div class="habit-card-icon" style="background: ${habit.color}">${habit.icon}</div>
                 <div class="habit-card-info">
@@ -322,6 +322,9 @@ function renderHabitsList(habitsList, archived) {
             <div class="habit-card-actions">
                 <button class="btn-ghost" onclick="toggleHabitCompletion(${habit.id}, '${getTodayDate()}')">
                     ${habit.today_status === 'completed' ? '✓ Done' : 'Mark Done'}
+                </button>
+                <button class="btn-danger" onclick="deleteHabit(${habit.id})">
+                    Delete
                 </button>
             </div>
         </article>
@@ -523,6 +526,41 @@ function showLoading() {
 function hideLoading() {
     document.body.style.cursor = 'default';
 }
+
+async function deleteHabit(habitId) {
+    const habitCard = document.querySelector(`[data-habit-id="${habitId}"]`);
+    const habitName = habitCard ? habitCard.dataset.habitName : 'this habit';
+    
+    const confirmed = window.confirm(`Delete "${habitName}" permanently? This cannot be undone.`);
+    if (!confirmed) {
+        return;
+    }
+
+    showLoading();
+
+    try {
+        const result = await HabitAPI.deleteHabit(habitId);
+
+        if (result.success) {
+            showToast(result.message || 'Habit deleted successfully', 'success');
+
+            if (currentView === 'dashboard') {
+                await initializeDashboard();
+            }
+
+            await loadHabits(currentHabitsArchived);
+        } else {
+            showToast('Failed to delete habit: ' + (result.message || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        console.error('Delete habit error:', error);
+        showToast('Error deleting habit', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+window.deleteHabit = deleteHabit;
 
 /**
  * New Habit Modal
