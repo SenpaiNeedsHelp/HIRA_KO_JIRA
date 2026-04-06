@@ -10,6 +10,9 @@ let currentView = 'dashboard';
 let currentUser = null;
 let dashboardData = null;
 let habits = [];
+let currentHabitsArchived = false;
+let selectedHabitCategory = 'all';
+let selectedHabitSort = 'custom';
 let weeklyChart = null;
 let trendChart = null;
 
@@ -240,12 +243,23 @@ function updateCharts() {
  * Load Habits List
  */
 async function loadHabits(archived = false, category = null) {
+    currentHabitsArchived = archived;
+
     try {
         const result = await HabitAPI.getHabits(archived, category);
 
         if (result.success) {
             habits = result.habits;
-            renderHabitsList(habits, archived);
+
+            let visibleHabits = [...habits];
+
+            if (selectedHabitCategory !== 'all') {
+                visibleHabits = visibleHabits.filter(habit => habit.category === selectedHabitCategory);
+            }
+
+            visibleHabits = sortHabitsList(visibleHabits, selectedHabitSort);
+
+            renderHabitsList(visibleHabits, archived);
         } else {
             showToast('Failed to load habits', 'error');
         }
@@ -286,7 +300,7 @@ function renderHabitsList(habitsList, archived) {
     }
 
     habitsGrid.innerHTML = habitsList.map(habit => `
-        <article class="card habit-card" data-habit-id="${habit.id}">
+        <article class="card habit-card" data-habit-id="${habit.id}" data-habit-name="${habit.name}">
             <div class="habit-card-header">
                 <div class="habit-card-icon" style="background: ${habit.color}">${habit.icon}</div>
                 <div class="habit-card-info">
@@ -309,9 +323,38 @@ function renderHabitsList(habitsList, archived) {
                 <button class="btn-ghost" onclick="toggleHabitCompletion(${habit.id}, '${getTodayDate()}')">
                     ${habit.today_status === 'completed' ? '✓ Done' : 'Mark Done'}
                 </button>
+                <button class="btn-danger" onclick="deleteHabit(${habit.id})">
+                    Delete
+                </button>
             </div>
         </article>
     `).join('');
+}
+
+function sortHabitsList(habitsList, sortBy) {
+    const sortedHabits = [...habitsList];
+
+    switch (sortBy) {
+        case 'name':
+            sortedHabits.sort((a, b) => a.name.localeCompare(b.name));
+            break;
+        case 'newest':
+            sortedHabits.sort((a, b) => new Date(b.created_at) - new Date(a.created_at));
+            break;
+        case 'streak':
+            sortedHabits.sort((a, b) => {
+                const aStreak = Number(a.total_completions || 0);
+                const bStreak = Number(b.total_completions || 0);
+                return bStreak - aStreak;
+            });
+            break;
+        case 'custom':
+        default:
+            // Keep backend order (display_order then created_at)
+            break;
+    }
+
+    return sortedHabits;
 }
 
 /**
@@ -334,6 +377,24 @@ function setupEventListeners() {
             loadHabits(index === 1); // index 1 = archived
         });
     });
+
+    // Habits category filter
+    const categoryFilter = document.getElementById('habits-category-filter');
+    if (categoryFilter) {
+        categoryFilter.addEventListener('change', () => {
+            selectedHabitCategory = categoryFilter.value;
+            loadHabits(currentHabitsArchived);
+        });
+    }
+
+    // Habits sort selector
+    const sortBy = document.getElementById('habits-sort-by');
+    if (sortBy) {
+        sortBy.addEventListener('change', () => {
+            selectedHabitSort = sortBy.value;
+            loadHabits(currentHabitsArchived);
+        });
+    }
 
     // New Habit buttons
     document.querySelectorAll('button').forEach(btn => {
@@ -465,6 +526,41 @@ function showLoading() {
 function hideLoading() {
     document.body.style.cursor = 'default';
 }
+
+async function deleteHabit(habitId) {
+    const habitCard = document.querySelector(`[data-habit-id="${habitId}"]`);
+    const habitName = habitCard ? habitCard.dataset.habitName : 'this habit';
+    
+    const confirmed = window.confirm(`Delete "${habitName}" permanently? This cannot be undone.`);
+    if (!confirmed) {
+        return;
+    }
+
+    showLoading();
+
+    try {
+        const result = await HabitAPI.deleteHabit(habitId);
+
+        if (result.success) {
+            showToast(result.message || 'Habit deleted successfully', 'success');
+
+            if (currentView === 'dashboard') {
+                await initializeDashboard();
+            }
+
+            await loadHabits(currentHabitsArchived);
+        } else {
+            showToast('Failed to delete habit: ' + (result.message || 'Unknown error'), 'error');
+        }
+    } catch (error) {
+        console.error('Delete habit error:', error);
+        showToast('Error deleting habit', 'error');
+    } finally {
+        hideLoading();
+    }
+}
+
+window.deleteHabit = deleteHabit;
 
 /**
  * New Habit Modal
