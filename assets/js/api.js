@@ -4,7 +4,10 @@
  */
 
 const HabitAPI = {
-    baseURL: '/jira/api',
+    baseURL: (function () {
+        const path = window.location.pathname.replace(/\/[^\/]*$/, '');
+        return path === '' || path === '/' ? '/api' : `${path}/api`;
+    })(),
     currentUser: null,
 
     /**
