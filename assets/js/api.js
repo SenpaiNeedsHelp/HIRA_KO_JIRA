@@ -4,7 +4,10 @@
  */
 
 const HabitAPI = {
-    baseURL: '/jira/api',
+    baseURL: (function () {
+        const path = window.location.pathname.replace(/\/[^\/]*$/, '');
+        return path === '' || path === '/' ? '/api' : `${path}/api`;
+    })(),
     currentUser: null,
 
     /**
@@ -53,6 +56,14 @@ const HabitAPI = {
             localStorage.setItem('habit-tracker-auth', JSON.stringify({ authenticated: true }));
         }
         return result;
+    },
+
+    async requestPasswordReset(email) {
+        return await this.request('/auth/forgot-password.php', 'POST', { email });
+    },
+
+    async resetPassword(email, otp, password) {
+        return await this.request('/auth/reset-password.php', 'POST', { email, otp, password });
     },
 
     async signup(email, password, name) {

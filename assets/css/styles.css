@@ -122,6 +122,14 @@ body { min-height: 100dvh; }
 .auth-field input { border: 1px solid var(--border); background: var(--surface-soft); border-radius: 8px; height: 44px; padding: 0 12px; font-size: 14px; color: var(--text); font-weight: 600; font-family: inherit; transition: border-color .2s; }
 .auth-field input:focus { outline: none; border-color: var(--brand); box-shadow: 0 0 0 3px var(--focus-ring); }
 
+.auth-field-hidden { display: none; }
+
+.auth-actions { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; margin-top: 10px; }
+.auth-secondary { border: 1px solid var(--brand); background: transparent; color: var(--brand); padding: 0 14px; height: 44px; border-radius: 8px; cursor: pointer; transition: background .2s, color .2s; }
+.auth-secondary:hover { background: rgba(91, 90, 247, .08); }
+.auth-info { margin: 10px 0 0; color: var(--muted); font-size: 13px; }
+.auth-forgot { margin: 14px 0 0 0; color: var(--brand); font-size: 13px; font-weight: 700; cursor: pointer; text-align: right; }
+
 .auth-submit { width: 100%; margin-top: 8px; border: 0; border-radius: 8px; height: 44px; background: var(--btn-bg); color: var(--btn-text); font-family: inherit; font-size: 15px; font-weight: 700; cursor: pointer; transition: opacity .2s, transform .15s, box-shadow .2s; }
 .auth-submit:hover { transform: translateY(-1px); box-shadow: 0 10px 20px rgba(3,7,31,.2); }
 .auth-submit:disabled { cursor: not-allowed; }

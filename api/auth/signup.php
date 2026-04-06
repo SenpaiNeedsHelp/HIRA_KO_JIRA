@@ -1,9 +1,11 @@
 <?php
 require_once '../config/database.php';
-require_once '../utils/response.php';
-require_once '../utils/helpers.php';
 
 setCorsHeaders();
+
+function generateVerificationToken() {
+    return bin2hex(random_bytes(32));
+}
 
 $db = (new Database())->getConnection();
 $data = getJsonInput();

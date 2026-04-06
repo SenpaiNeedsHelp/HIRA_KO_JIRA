@@ -72,6 +72,22 @@ function sendResponse($data, $statusCode = 200) {
 }
 
 /**
+ * Ensure password reset columns exist on users table
+ */
+function ensurePasswordResetColumns($pdo) {
+    $queries = [
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_code VARCHAR(10) NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_expires_at DATETIME NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_request_time DATETIME NULL",
+        "ALTER TABLE users ADD COLUMN IF NOT EXISTS password_reset_resend_count TINYINT UNSIGNED NOT NULL DEFAULT 0"
+    ];
+
+    foreach ($queries as $sql) {
+        $pdo->exec($sql);
+    }
+}
+
+/**
  * Verify user session
  */
 function verifySession($pdo) {

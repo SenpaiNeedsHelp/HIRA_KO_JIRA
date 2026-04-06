@@ -4,7 +4,7 @@
  * POST /api/auth/logout.php
  */
 
-require_once '../utils/response.php';
+require_once '../config/database.php';
 
 setCorsHeaders();
 
