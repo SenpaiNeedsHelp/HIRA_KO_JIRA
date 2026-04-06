@@ -58,6 +58,14 @@ const HabitAPI = {
         return result;
     },
 
+    async requestPasswordReset(email) {
+        return await this.request('/auth/forgot-password.php', 'POST', { email });
+    },
+
+    async resetPassword(email, otp, password) {
+        return await this.request('/auth/reset-password.php', 'POST', { email, otp, password });
+    },
+
     async signup(email, password, name) {
         const result = await this.request('/auth/signup.php', 'POST', { email, password, name });
         if (result.success) {
