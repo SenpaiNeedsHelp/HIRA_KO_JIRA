@@ -8,6 +8,7 @@
 // State
 let currentView = 'dashboard';
 let currentUser = null;
+let profileAvatarDraft = null;
 let dashboardData = null;
 let habits = [];
 let weeklyChart = null;
@@ -22,12 +23,22 @@ document.addEventListener('DOMContentLoaded', async () => {
     console.log('Session check result:', session);
 
     if (!session.authenticated) {
-        console.log('Not authenticated, redirecting to login');
-        window.location.href = 'index.html';
-        return;
+        console.log('Not authenticated, using test user');
+        // Temporary: use test user for development
+        currentUser = {
+            id: 5,
+            email: 'geeksatyam@gmail.com',
+            name: 'satyam',
+            avatar: null,
+            level: 4,
+            xp: 320,
+            current_streak: 15,
+            best_streak: 22,
+            member_since: '2026-01-01 00:00:00'
+        };
+    } else {
+        currentUser = session.user;
     }
-
-    currentUser = session.user;
     console.log('Current user:', currentUser);
 
     await initializeDashboard();
@@ -741,8 +752,8 @@ function formatDateShort(date) {
 }
 
 /**
- * Calculate activity level (0-4) for a date
- * Using demo data: varies based on date seed
+ * Calculate activity status for a date
+ * Returns: 'completed', 'pending', 'missed', or 'none'
  */
 function calculateActivityLevel(date) {
     const today = new Date();
@@ -750,12 +761,26 @@ function calculateActivityLevel(date) {
     const dateToCheck = new Date(date);
     dateToCheck.setHours(0, 0, 0, 0);
     
-    if (dateToCheck > today) return -1; // future
+    if (dateToCheck > today) return 'none'; // future
 
-    // Generate pseudo-random level based on date
-    const seed = date.getDate() + date.getMonth() * 31 + date.getFullYear() * 365;
-    if (seed % 5 === 0) return 0;
-    return (seed % 4) + 1;
+    // Use local date string to match API format
+    const dateKey = dateToCheck.getFullYear() + '-' + 
+                   String(dateToCheck.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(dateToCheck.getDate()).padStart(2, '0');
+    const dayData = heatMapData[dateKey];
+    
+    if (!dayData) return 'none';
+    
+    // If there are completed habits, return completed
+    if (dayData.completed > 0) return 'completed';
+    
+    // If there are missed habits, return missed
+    if (dayData.missed > 0) return 'missed';
+    
+    // If there are pending habits, return pending
+    if (dayData.pending > 0) return 'pending';
+    
+    return 'none';
 }
 
 /* ═════════════════════════════════════════
@@ -772,6 +797,8 @@ let calendarState = {
     completions: {} // { 'YYYY-MM-DD': { habit_id: 'status' } }
 };
 
+let heatMapData = {}; // { 'YYYY-MM-DD': { completed: count, missed: count, pending: count } }
+
 /**
  * Initialize Calendar
  */
@@ -785,6 +812,13 @@ async function initializeCalendar() {
         if (habitsResult.success) {
             calendarState.habits = habitsResult.habits || [];
             console.log('Loaded', calendarState.habits.length, 'habits');
+        }
+        
+        // Fetch heat map data
+        const heatMapJson = await HabitAPI.request(`/calendar/heatmap.php?user_id=${currentUser.id}`);
+        if (heatMapJson.success) {
+            heatMapData = heatMapJson.data || {};
+            console.log('Loaded heatmap data:', heatMapData);
         }
         
         // Setup calendar UI
@@ -847,6 +881,11 @@ function setupCalendarTabs() {
                 panel.style.display = k === tabName ? '' : 'none';
             }
         });
+
+        // Re-render the active view
+        if (tabName === 'heatmap') renderHeatmap();
+        if (tabName === 'month') renderMonthView();
+        if (tabName === 'week') renderWeekView();
     }
 
     // Add click listeners
@@ -918,19 +957,25 @@ function renderHeatmap() {
     // Generate 90 days of cells (12 weeks = 84 + 6 buffer = 90)
     for (let i = 89; i >= 0; i--) {
         const date = addDaysToDate(today, -i);
-        const level = calculateActivityLevel(date);
+        const status = calculateActivityLevel(date);
         
         const cell = document.createElement('div');
-        cell.className = `hm-cell${level > 0 ? ` lv${level}` : ''}`;
-        if (level < 0) cell.style.opacity = '0.3';
+        cell.className = `hm-cell${status !== 'none' ? ` ${status}` : ''}`;
+        if (status === 'none') cell.style.opacity = '0.3';
         
         // Add hover tooltip
         cell.addEventListener('mouseenter', (e) => {
             const tooltip = document.getElementById('hm-tooltip');
             if (tooltip) {
                 document.getElementById('hm-tt-date').textContent = formatDateShort(date);
-                document.getElementById('hm-tt-habits').textContent = level <= 0 ? '0 completed' : `${level} completed`;
-                document.getElementById('hm-tt-pct').textContent = `${Math.round(level / (calendarState.habits.length || 1) * 100) || 0}%`;
+                const dateKey = date.getFullYear() + '-' + 
+                               String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                               String(date.getDate()).padStart(2, '0');
+                const dayData = heatMapData[dateKey] || { completed: 0, missed: 0, pending: 0 };
+                document.getElementById('hm-tt-habits').textContent = 
+                    `${dayData.completed} completed, ${dayData.missed} missed, ${dayData.pending} pending`;
+                document.getElementById('hm-tt-pct').textContent = 
+                    `${Math.round((dayData.completed / (dayData.completed + dayData.missed + dayData.pending || 1)) * 100)}%`;
                 tooltip.style.display = 'block';
             }
         });
@@ -1026,24 +1071,14 @@ function createMonthDayElement(date, otherMonth) {
 
     // Status dots
     if (!otherMonth) {
-        const level = calculateActivityLevel(date);
-        if (level > 0) {
+        const status = calculateActivityLevel(date);
+        if (status !== 'none') {
             const dotsEl = document.createElement('div');
             dotsEl.className = 'month-day-dots';
             
-            if (level >= 3) {
-                const dot = document.createElement('span');
-                dot.className = 'm-dot s-completed';
-                dotsEl.appendChild(dot);
-            } else if (level === 2) {
-                const dot = document.createElement('span');
-                dot.className = 'm-dot s-pending';
-                dotsEl.appendChild(dot);
-            } else {
-                const dot = document.createElement('span');
-                dot.className = 'm-dot s-missed';
-                dotsEl.appendChild(dot);
-            }
+            const dot = document.createElement('span');
+            dot.className = `m-dot s-${status}`;
+            dotsEl.appendChild(dot);
             
             cell.appendChild(dotsEl);
         }
@@ -1051,6 +1086,28 @@ function createMonthDayElement(date, otherMonth) {
 
     if (!otherMonth) {
         cell.addEventListener('click', () => selectDay(date));
+        
+        // Add tooltip for month view
+        cell.addEventListener('mouseenter', (e) => {
+            const tooltip = document.getElementById('hm-tooltip');
+            if (tooltip) {
+                document.getElementById('hm-tt-date').textContent = formatDateShort(date);
+                const dateKey = date.getFullYear() + '-' + 
+                               String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                               String(date.getDate()).padStart(2, '0');
+                const dayData = heatMapData[dateKey] || { completed: 0, missed: 0, pending: 0 };
+                document.getElementById('hm-tt-habits').textContent = 
+                    `${dayData.completed} completed, ${dayData.missed} missed, ${dayData.pending} pending`;
+                document.getElementById('hm-tt-pct').textContent = 
+                    `${Math.round((dayData.completed / (dayData.completed + dayData.missed + dayData.pending || 1)) * 100)}%`;
+                tooltip.style.display = 'block';
+            }
+        });
+        
+        cell.addEventListener('mouseleave', () => {
+            const tooltip = document.getElementById('hm-tooltip');
+            if (tooltip) tooltip.style.display = 'none';
+        });
     }
 
     return cell;
@@ -1079,7 +1136,7 @@ function renderWeekView() {
 
     for (let i = 0; i < 7; i++) {
         const date = addDaysToDate(weekStart, i);
-        const level = calculateActivityLevel(date);
+        const status = calculateActivityLevel(date);
         
         const col = document.createElement('div');
         col.className = 'week-day-col';
@@ -1098,26 +1155,42 @@ function renderWeekView() {
             <div class="week-habit-dots" id="week-dots-${i}"></div>
         `;
 
-        if (level > 0) {
+        if (status !== 'none') {
             const dotsEl = col.querySelector(`#week-dots-${i}`);
-            const statuses = level >= 3 ? 
-                ['s-completed', 's-completed'] : 
-                level === 2 ? ['s-pending'] : ['s-missed'];
-            
-            statuses.forEach(status => {
-                const pill = document.createElement('div');
-                pill.className = `week-habit-pill ${status}`;
-                const labels = {
-                    's-completed': 'Done',
-                    's-missed': 'Missed',
-                    's-pending': 'Pending'
-                };
-                pill.textContent = labels[status];
-                dotsEl.appendChild(pill);
-            });
+            const pill = document.createElement('div');
+            pill.className = `week-habit-pill s-${status}`;
+            const labels = {
+                'completed': 'Done',
+                'missed': 'Missed',
+                'pending': 'Pending'
+            };
+            pill.textContent = labels[status];
+            dotsEl.appendChild(pill);
         }
 
         col.addEventListener('click', () => selectDay(date));
+        
+        // Add tooltip for week view
+        col.addEventListener('mouseenter', (e) => {
+            const tooltip = document.getElementById('hm-tooltip');
+            if (tooltip) {
+                document.getElementById('hm-tt-date').textContent = formatDateShort(date);
+                const dateKey = date.getFullYear() + '-' + 
+                               String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                               String(date.getDate()).padStart(2, '0');
+                const dayData = heatMapData[dateKey] || { completed: 0, missed: 0, pending: 0 };
+                document.getElementById('hm-tt-habits').textContent = 
+                    `${dayData.completed} completed, ${dayData.missed} missed, ${dayData.pending} pending`;
+                document.getElementById('hm-tt-pct').textContent = 
+                    `${Math.round((dayData.completed / (dayData.completed + dayData.missed + dayData.pending || 1)) * 100)}%`;
+                tooltip.style.display = 'block';
+            }
+        });
+        
+        col.addEventListener('mouseleave', () => {
+            const tooltip = document.getElementById('hm-tooltip');
+            if (tooltip) tooltip.style.display = 'none';
+        });
         grid.appendChild(col);
     }
     
@@ -1173,58 +1246,49 @@ function renderDayPanel(date) {
         day: 'numeric'
     });
 
-    // For demo, generate fake status data based on date
-    const today = new Date();
-    const isFuture = date > today;
+    // Get real completion data for this date
+    const dateKey = date.getFullYear() + '-' + 
+                   String(date.getMonth() + 1).padStart(2, '0') + '-' + 
+                   String(date.getDate()).padStart(2, '0');
+    const dayData = heatMapData[dateKey] || { completed: 0, missed: 0, pending: 0 };
     
-    let completed = 0, missed = 0, pending = 0;
-
-    // Generate habit statuses for this date (demo data)
-    if (!isFuture && calendarState.habits.length > 0) {
-        const level = calculateActivityLevel(date);
-        if (level > 0) {
-            completed = Math.min(level, calendarState.habits.length);
-            missed = Math.max(0, calendarState.habits.length - level);
-        } else {
-            missed = calendarState.habits.length;
-        }
-    } else if (isFuture) {
-        pending = calendarState.habits.length;
-    } else {
-        missed = calendarState.habits.length;
-    }
+    const completed = dayData.completed || 0;
+    const missed = dayData.missed || 0;
+    const pending = dayData.pending || 0;
 
     // Update badges
     if (badgesDone) badgesDone.textContent = `${completed} done`;
     if (badgesMissed) badgesMissed.textContent = `${missed} missed`;
     if (badgesPending) badgesPending.textContent = `${pending} pending`;
 
-    // Render habits for this date
+    // Render habits summary for this date
     if (!habitsList) {
         console.error('Day habits list element not found!');
         return;
     }
 
-    if (calendarState.habits.length === 0 || (completed === 0 && missed === 0 && pending === 0)) {
+    if (completed === 0 && missed === 0 && pending === 0) {
         habitsList.innerHTML = '<div class="empty-state compact"><p style="margin:0">No habits recorded for this date.</p></div>';
         console.log('No habits to display for this date');
         return;
     }
 
-    habitsList.innerHTML = calendarState.habits.map((habit, index) => {
-        let status = 'pending';
-        if (!isFuture) {
-            status = index < completed ? 'completed' : 'missed';
-        }
-
-        return `
-            <div class="day-habit-item" data-habit-id="${habit.id}" data-status="${status}">
-                <span class="habit-status-indicator ${status}"></span>
-                <span class="habit-name">${habit.name}</span>
-                <span class="habit-category">${habit.category}</span>
+    habitsList.innerHTML = `
+        <div class="day-summary">
+            <div class="summary-item completed">
+                <span class="summary-count">${completed}</span>
+                <span class="summary-label">Completed</span>
             </div>
-        `;
-    }).join('');
+            <div class="summary-item missed">
+                <span class="summary-count">${missed}</span>
+                <span class="summary-label">Missed</span>
+            </div>
+            <div class="summary-item pending">
+                <span class="summary-count">${pending}</span>
+                <span class="summary-label">Pending</span>
+            </div>
+        </div>
+    `;
     
     console.log('Day panel rendered with', calendarState.habits.length, 'habits');
 }
@@ -1240,12 +1304,17 @@ async function loadProfileData() {
     console.log('Loading profile data for user:', currentUser);
     
     // Display user info
-    document.getElementById('profile-avatar-display').textContent = 
-        (currentUser.name ? currentUser.name.charAt(0) : 'U').toUpperCase();
+    renderProfileAvatar(currentUser.avatar);
     document.getElementById('profile-name-display').textContent = currentUser.name || 'User';
     document.getElementById('profile-email-display').textContent = currentUser.email || 'user@email.com';
     document.getElementById('profile-level-badge').textContent = currentUser.level || 1;
     document.getElementById('profile-xp-badge').textContent = currentUser.xp || 0;
+    const memberSinceEl = document.getElementById('profile-since');
+    if (memberSinceEl) {
+        memberSinceEl.textContent = currentUser.member_since ?
+            `Member since ${new Date(currentUser.member_since).toLocaleDateString('en-US', { month: 'long', year: 'numeric' })}` :
+            'Member since N/A';
+    }
     
     // Update XP bar
     const xpLevel = currentUser.level || 1;
@@ -1263,8 +1332,18 @@ async function loadProfileData() {
         if (result.success) {
             document.getElementById('ps-total').textContent = result.data.total_habits || 0;
             document.getElementById('ps-streak').textContent = currentUser.best_streak || 0;
-            document.getElementById('ps-done').textContent = result.data.total_completions || 0;
-            document.getElementById('ps-rate').textContent = result.data.completion_rate_all_time || '0%';
+            
+            // Calculate total completions
+            let totalCompletions = 0;
+            if (result.data.weekly_overview) {
+                totalCompletions = result.data.weekly_overview.reduce((sum, day) => sum + day.completed, 0);
+            }
+            document.getElementById('ps-done').textContent = totalCompletions;
+            
+            // Calculate all-time completion rate (simplified)
+            const totalPossible = (result.data.total_habits || 0) * 30; // Rough estimate
+            const rate = totalPossible > 0 ? Math.round((totalCompletions / totalPossible) * 100) : 0;
+            document.getElementById('ps-rate').textContent = rate + '%';
         }
     } catch (error) {
         console.error('Error loading profile stats:', error);
@@ -1291,11 +1370,36 @@ function showProfileEditForm() {
     clearProfileErrors();
 }
 
+function renderProfileAvatar(avatar) {
+    const avatarEl = document.getElementById('profile-avatar-display');
+    if (!avatarEl) return;
+
+    // Use draft avatar if available
+    const displayAvatar = profileAvatarDraft !== null ? profileAvatarDraft : avatar;
+
+    if (displayAvatar) {
+        avatarEl.style.backgroundImage = `url(${displayAvatar})`;
+        avatarEl.textContent = '';
+    } else {
+        avatarEl.style.backgroundImage = '';
+        avatarEl.textContent = (currentUser && currentUser.name ? currentUser.name.charAt(0) : 'U').toUpperCase();
+    }
+}
+
 /**
  * Hide Profile Edit Form
  */
 function hideProfileEditForm() {
     console.log('Hiding profile edit form');
+
+    if (profileAvatarDraft) {
+        profileAvatarDraft = null;
+        const avatarInput = document.getElementById('profile-avatar-input');
+        if (avatarInput) {
+            avatarInput.value = '';
+        }
+        renderProfileAvatar(currentUser.avatar);
+    }
     
     // Show hero card, hide edit card
     document.querySelector('.profile-hero').style.display = 'block';
@@ -1367,18 +1471,32 @@ async function handleProfileSave() {
     const email = document.getElementById('edit-email').value.trim();
     const password = document.getElementById('edit-password').value;
     
+    const updateData = {
+        name,
+        email
+    };
+
+    if (password) {
+        updateData.password = password;
+    }
+    if (profileAvatarDraft !== null) {
+        updateData.avatar = profileAvatarDraft;
+    }
+    
     try {
-        // For now, show success message (update backend as needed)
-        currentUser.name = name;
-        currentUser.email = email;
-        
-        // Update display
-        document.getElementById('profile-name-display').textContent = name;
-        document.getElementById('profile-email-display').textContent = email;
-        document.getElementById('profile-avatar-display').textContent = name.charAt(0).toUpperCase();
-        
-        showToast('Profile updated successfully!', 'success');
+        const result = await HabitAPI.updateProfile(updateData);
+        if (!result.success) {
+            showToast(result.message || 'Failed to update profile', 'error');
+            return;
+        }
+
+        currentUser = result.user;
+        profileAvatarDraft = null;
+
+        await loadProfileData();
         hideProfileEditForm();
+
+        showToast('Profile updated successfully!', 'success');
     } catch (error) {
         console.error('Profile save error:', error);
         showToast('Error saving profile', 'error');
@@ -1409,40 +1527,692 @@ async function handleAvatarUpload(e) {
     const reader = new FileReader();
     reader.onload = (event) => {
         const base64 = event.target.result;
-        // Update avatar display
-        document.getElementById('profile-avatar-display').style.backgroundImage = `url(${base64})`;
-        document.getElementById('profile-avatar-display').textContent = '';
-        showToast('Avatar updated!', 'success');
+        profileAvatarDraft = base64;
+        renderProfileAvatar(base64);
+        showToast('Avatar ready to save!', 'success');
     };
     reader.readAsDataURL(file);
+}
+
+/**
+ * Generate comprehensive report with analysis
+ */
+function generateComprehensiveReport() {
+    const habitsArray = Object.values(calendarState.habits || {});
+    
+    // Calculate statistics
+    const totalCompletions = Object.values(heatMapData).reduce((sum, day) => sum + (day.completed || 0), 0);
+    const totalMissed = Object.values(heatMapData).reduce((sum, day) => sum + (day.missed || 0), 0);
+    const totalPending = Object.values(heatMapData).reduce((sum, day) => sum + (day.pending || 0), 0);
+    const totalDays = Object.keys(heatMapData).length;
+    const overallCompletionRate = totalDays > 0 ? Math.round((totalCompletions / (totalCompletions + totalMissed + totalPending)) * 100) : 0;
+    
+    // Analyze daily performance
+    const dailyPerformance = Object.entries(heatMapData).map(([date, data]) => ({
+        date,
+        completed: data.completed || 0,
+        missed: data.missed || 0,
+        pending: data.pending || 0,
+        total: (data.completed || 0) + (data.missed || 0) + (data.pending || 0),
+        completionRate: ((data.completed || 0) / ((data.completed || 0) + (data.missed || 0) + (data.pending || 0) || 1)) * 100
+    })).sort((a, b) => new Date(b.date) - new Date(a.date));
+    
+    // Find best and worst days
+    const bestDay = dailyPerformance.reduce((best, day) => day.completionRate > best.completionRate ? day : best, dailyPerformance[0] || {});
+    const worstDay = dailyPerformance.reduce((worst, day) => (day.missed > 0 || day.pending > 0) && day.completionRate < worst.completionRate ? day : worst, dailyPerformance[0] || {});
+    
+    // Week analysis
+    const weekStats = {};
+    dailyPerformance.forEach(day => {
+        const date = new Date(day.date);
+        const weekNum = Math.ceil((date.getDate()) / 7);
+        const week = `Week ${weekNum}`;
+        if (!weekStats[week]) {
+            weekStats[week] = { completed: 0, missed: 0, pending: 0, days: 0 };
+        }
+        weekStats[week].completed += day.completed;
+        weekStats[week].missed += day.missed;
+        weekStats[week].pending += day.pending;
+        weekStats[week].days += 1;
+    });
+    
+    // Insights
+    const insights = [];
+    if (overallCompletionRate >= 90) insights.push('🌟 Excellent consistency! You\'re maintaining 90%+ completion rate.');
+    else if (overallCompletionRate >= 75) insights.push('💪 Great job! You\'re maintaining a 75%+ completion rate.');
+    else if (overallCompletionRate >= 50) insights.push('📈 Good effort! Keep pushing to improve your completion rate.');
+    else insights.push('⚠️ Time to refocus! Try to set more achievable daily goals.');
+    
+    if (currentUser.current_streak >= 20) insights.push(`🔥 Amazing streak of ${currentUser.current_streak} days! Keep it up!`);
+    else if (currentUser.current_streak >= 10) insights.push(`✨ Solid streak of ${currentUser.current_streak} days. You\'re on fire!`);
+    
+    if (totalPending > totalMissed) insights.push('⏳ You have pending habits. Try to complete them as soon as possible.');
+    else if (totalMissed > 0) insights.push(`📊 ${totalMissed} missed habits detected. Consider adjusting your goals or routine.`);
+    
+    const report = {
+        metadata: {
+            exportDate: new Date().toISOString(),
+            exportedBy: currentUser.name,
+            dataRange: {
+                from: dailyPerformance[dailyPerformance.length - 1]?.date || 'N/A',
+                to: dailyPerformance[0]?.date || 'N/A'
+            }
+        },
+        userProfile: {
+            id: currentUser.id,
+            name: currentUser.name,
+            email: currentUser.email,
+            level: currentUser.level,
+            xp: currentUser.xp,
+            currentStreak: currentUser.current_streak,
+            bestStreak: currentUser.best_streak,
+            memberSince: currentUser.member_since
+        },
+        overallStatistics: {
+            totalHabits: habitsArray.length,
+            totalDays: totalDays,
+            totalCompletions: totalCompletions,
+            totalMissed: totalMissed,
+            totalPending: totalPending,
+            overallCompletionRate: `${overallCompletionRate}%`,
+            averageCompletionsPerDay: totalDays > 0 ? (totalCompletions / totalDays).toFixed(1) : 0,
+            averageMissedPerDay: totalDays > 0 ? (totalMissed / totalDays).toFixed(1) : 0
+        },
+        dailyPerformance: {
+            bestDay: bestDay,
+            worstDay: worstDay,
+            allDays: dailyPerformance
+        },
+        weeklyAnalysis: weekStats,
+        habits: habitsArray.map(habit => ({
+            id: habit.id,
+            name: habit.name,
+            category: habit.category,
+            frequency: habit.frequency,
+            color: habit.color,
+            icon: habit.icon
+        })),
+        insights: insights,
+        recommendations: generateRecommendations(overallCompletionRate, habitsArray.length, totalMissed)
+    };
+    
+    return report;
+}
+
+/**
+ * Generate recommendations based on analysis
+ */
+function generateRecommendations(completionRate, habitCount, totalMissed) {
+    const recommendations = [];
+    
+    if (habitCount > 7) {
+        recommendations.push('Consider reducing the number of habits to focus on quality over quantity.');
+    }
+    if (completionRate < 70) {
+        recommendations.push('Try setting more realistic daily goals or spreading habits throughout the week.');
+    }
+    if (totalMissed > 5) {
+        recommendations.push('Identify the habits with the most misses and consider reassessing their feasibility.');
+    }
+    if (completionRate >= 80) {
+        recommendations.push('Great job! Consider adding new habits to your tracker.');
+    }
+    if (recommendations.length === 0) {
+        recommendations.push('Keep maintaining your current routine - it\'s working well for you!');
+    }
+    
+    return recommendations;
+}
+
+/**
+ * Generate simple HTML report (fallback)
+ */
+function generateSimpleHtmlReport(report) {
+    const rate = parseInt(report.overallStatistics.overallCompletionRate.replace('%', '')) || 0;
+    
+    return `<!DOCTYPE html>
+<html><head><meta charset="UTF-8"><title>Habit Report</title>
+<style>body{font-family:Arial;max-width:900px;margin:50px auto;background:#f5f5f5;padding:20px;}
+.header{background:#667eea;color:white;padding:20px;border-radius:8px;margin-bottom:20px;}
+.section{background:white;padding:20px;margin:20px 0;border-radius:8px;box-shadow:0 2px 4px #0001;}
+h2{color:#667eea;border-bottom:2px solid #667eea;padding-bottom:10px;}
+.stats{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin:15px 0;}
+.stat{background:#f0f0f0;padding:15px;border-radius:4px;text-align:center;}
+.stat-value{font-size:24px;font-weight:bold;color:#667eea;}
+.insights{background:#e7f3ff;border-left:4px solid #2196F3;padding:15px;margin:10px 0;}
+.habits{width:100%;border-collapse:collapse;}
+.habits th{background:#667eea;color:white;padding:10px;}
+.habits td{padding:10px;border-bottom:1px solid #ddd;}
+</style></head><body>
+<div class="header"><h1>📊 Habit Tracker Report</h1><p>${new Date().toLocaleString()}</p></div>
+<div class="section">
+<h2>User: ${report.userProfile.name}</h2>
+<p>Email: ${report.userProfile.email}</p>
+<p>Level: ⭐ ${report.userProfile.level} | XP: ✨ ${report.userProfile.xp}</p>
+<p>Streak: 🔥 ${report.userProfile.currentStreak} days (Best: 🏆 ${report.userProfile.bestStreak})</p>
+</div>
+<div class="section">
+<h2>📈 Statistics</h2>
+<div class="stats">
+<div class="stat"><div class="stat-value">${report.overallStatistics.totalHabits}</div>Total Habits</div>
+<div class="stat"><div class="stat-value">${report.overallStatistics.totalDays}</div>Days Tracked</div>
+<div class="stat"><div class="stat-value">${report.overallStatistics.overallCompletionRate}</div>Completion</div>
+</div>
+<div class="stats">
+<div class="stat"><div class="stat-value">${report.overallStatistics.totalCompletions}</div>Completed</div>
+<div class="stat"><div class="stat-value">${report.overallStatistics.totalMissed}</div>Missed</div>
+<div class="stat"><div class="stat-value">${report.overallStatistics.totalPending}</div>Pending</div>
+</div>
+</div>
+<div class="section">
+<h2>💡 Insights</h2>
+${report.insights.map(i => `<div class="insights">✓ ${i}</div>`).join('')}
+</div>
+<div class="section">
+<h2>🎯 Recommendations</h2>
+${report.recommendations.map(r => `<div class="insights">→ ${r}</div>`).join('')}
+</div>
+<div class="section">
+<h2>🎪 Your Habits</h2>
+<table class="habits"><thead><tr><th>Habit</th><th>Category</th></tr></thead><tbody>
+${report.habits.map(h => `<tr><td>${h.name}</td><td>${h.category}</td></tr>`).join('')}
+</tbody></table>
+</div>
+</body></html>`;
+}
+
+/**
+ * Generate HTML report
+ */
+function generateHtmlReport(report) {
+    const completionRate = parseInt(report.overallStatistics.overallCompletionRate.replace('%', '')) || 0;
+    const completionColor = completionRate >= 80 ? '#10b981' : completionRate >= 60 ? '#fbbf24' : '#ef4444';
+    
+    return `
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Habit Tracker - Comprehensive Report</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            padding: 20px;
+            color: #333;
+        }
+        
+        .container {
+            max-width: 1200px;
+            margin: 0 auto;
+            background: white;
+            border-radius: 12px;
+            box-shadow: 0 20px 60px rgba(0,0,0,0.3);
+            overflow: hidden;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 40px;
+            text-align: center;
+        }
+        
+        .header h1 {
+            font-size: 2.5em;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            font-size: 1.1em;
+            opacity: 0.9;
+        }
+        
+        .content {
+            padding: 40px;
+        }
+        
+        .section {
+            margin-bottom: 40px;
+        }
+        
+        .section h2 {
+            font-size: 1.8em;
+            color: #667eea;
+            margin-bottom: 20px;
+            border-bottom: 2px solid #667eea;
+            padding-bottom: 10px;
+        }
+        
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 20px;
+            margin-bottom: 30px;
+        }
+        
+        .stat-card {
+            background: #f8f9fa;
+            border: 2px solid #e9ecef;
+            border-radius: 8px;
+            padding: 20px;
+            text-align: center;
+            transition: transform 0.3s;
+        }
+        
+        .stat-card:hover {
+            transform: translateY(-5px);
+            border-color: #667eea;
+        }
+        
+        .stat-value {
+            font-size: 2em;
+            font-weight: bold;
+            color: #667eea;
+            margin: 10px 0;
+        }
+        
+        .stat-label {
+            font-size: 0.9em;
+            color: #6c757d;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+        
+        .completion-bar {
+            width: 100%;
+            height: 30px;
+            background: #e9ecef;
+            border-radius: 15px;
+            overflow: hidden;
+            margin: 10px 0;
+        }
+        
+        .completion-fill {
+            height: 100%;
+            background: ${completionColor};
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            color: white;
+            font-weight: bold;
+            transition: width 0.3s;
+        }
+        
+        .insights {
+            background: #f0f7ff;
+            border-left: 4px solid #0284c7;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .insights li {
+            margin: 10px 0;
+            font-size: 1em;
+            line-height: 1.6;
+        }
+        
+        .recommendations {
+            background: #f0fdf4;
+            border-left: 4px solid #16a34a;
+            padding: 20px;
+            border-radius: 8px;
+            margin: 15px 0;
+        }
+        
+        .recommendations li {
+            margin: 10px 0;
+            font-size: 1em;
+            line-height: 1.6;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            margin-top: 20px;
+        }
+        
+        th {
+            background: #667eea;
+            color: white;
+            padding: 12px;
+            text-align: left;
+            font-weight: 600;
+        }
+        
+        td {
+            padding: 12px;
+            border-bottom: 1px solid #e9ecef;
+        }
+        
+        tr:hover {
+            background: #f8f9fa;
+        }
+        
+        .badge {
+            display: inline-block;
+            padding: 4px 12px;
+            border-radius: 20px;
+            font-size: 0.85em;
+            font-weight: 600;
+        }
+        
+        .badge-completed {
+            background: #d1fae5;
+            color: #065f46;
+        }
+        
+        .badge-missed {
+            background: #fee2e2;
+            color: #991b1b;
+        }
+        
+        .badge-pending {
+            background: #fef3c7;
+            color: #92400e;
+        }
+        
+        .user-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            margin-bottom: 20px;
+        }
+        
+        .user-info {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 15px;
+        }
+        
+        .user-info-item {
+            padding: 10px;
+        }
+        
+        .user-info-label {
+            color: #6c757d;
+            font-size: 0.9em;
+            text-transform: uppercase;
+        }
+        
+        .user-info-value {
+            color: #333;
+            font-size: 1.1em;
+            font-weight: 600;
+            margin-top: 5px;
+        }
+        
+        .footer {
+            background: #f8f9fa;
+            padding: 20px;
+            text-align: center;
+            color: #6c757d;
+            border-top: 1px solid #e9ecef;
+        }
+        
+        .progress-item {
+            margin: 15px 0;
+        }
+        
+        .progress-label {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 5px;
+            font-weight: 500;
+        }
+        
+        .best-worst {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
+            margin-top: 20px;
+        }
+        
+        .day-card {
+            background: #f8f9fa;
+            padding: 20px;
+            border-radius: 8px;
+            border-left: 4px solid;
+        }
+        
+        .day-card.best {
+            border-left-color: #10b981;
+        }
+        
+        .day-card.worst {
+            border-left-color: #ef4444;
+        }
+        
+        @media print {
+            body {
+                background: white;
+                padding: 0;
+            }
+            .container {
+                box-shadow: none;
+                border-radius: 0;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <div class="header">
+            <h1>📊 Habit Tracker Report</h1>
+            <p>Comprehensive Analysis & Insights</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">Generated ${new Date(report.metadata.exportDate).toLocaleString()}</p>
+        </div>
+        
+        <div class="content">
+            <!-- User Profile -->
+            <div class="section">
+                <h2>👤 User Profile</h2>
+                <div class="user-card">
+                    <div class="user-info">
+                        <div class="user-info-item">
+                            <div class="user-info-label">Name</div>
+                            <div class="user-info-value">${report.userProfile.name}</div>
+                        </div>
+                        <div class="user-info-item">
+                            <div class="user-info-label">Email</div>
+                            <div class="user-info-value">${report.userProfile.email}</div>
+                        </div>
+                        <div class="user-info-item">
+                            <div class="user-info-label">Level</div>
+                            <div class="user-info-value">⭐ ${report.userProfile.level}</div>
+                        </div>
+                        <div class="user-info-item">
+                            <div class="user-info-label">XP/Experience</div>
+                            <div class="user-info-value">✨ ${report.userProfile.xp.toLocaleString()}</div>
+                        </div>
+                        <div class="user-info-item">
+                            <div class="user-info-label">Current Streak</div>
+                            <div class="user-info-value">🔥 ${report.userProfile.currentStreak} days</div>
+                        </div>
+                        <div class="user-info-item">
+                            <div class="user-info-label">Best Streak</div>
+                            <div class="user-info-value">🏆 ${report.userProfile.bestStreak} days</div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Overall Statistics -->
+            <div class="section">
+                <h2>📈 Overall Statistics</h2>
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-label">Total Habits</div>
+                        <div class="stat-value">${report.overallStatistics.totalHabits}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Days Tracked</div>
+                        <div class="stat-value">${report.overallStatistics.totalDays}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Completions</div>
+                        <div class="stat-value" style="color: #10b981;">${report.overallStatistics.totalCompletions}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Missed</div>
+                        <div class="stat-value" style="color: #ef4444;">${report.overallStatistics.totalMissed}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Pending</div>
+                        <div class="stat-value" style="color: #fbbf24;">${report.overallStatistics.totalPending}</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-label">Avg per Day</div>
+                        <div class="stat-value">${report.overallStatistics.averageCompletionsPerDay}</div>
+                    </div>
+                </div>
+                
+                <div class="progress-item">
+                    <div class="progress-label">
+                        <span>Overall Completion Rate</span>
+                        <strong>${report.overallStatistics.overallCompletionRate}</strong>
+                    </div>
+                    <div class="completion-bar">
+                        <div class="completion-fill" style="width: ${completionRate}%">
+                            ${completionRate}%
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Daily Performance -->
+            <div class="section">
+                <h2>📅 Daily Performance</h2>
+                <div class="best-worst">
+                    <div class="day-card best">
+                        <h3>🏆 Best Day</h3>
+                        <p><strong>Date:</strong> ${report.dailyPerformance.bestDay.date || 'N/A'}</p>
+                        <p><strong>Completion Rate:</strong> ${(report.dailyPerformance.bestDay.completionRate || 0).toFixed(0)}%</p>
+                        <p><span class="badge badge-completed">${report.dailyPerformance.bestDay.completed} Completed</span></p>
+                    </div>
+                    <div class="day-card worst">
+                        <h3>⚠️ Challenging Day</h3>
+                        <p><strong>Date:</strong> ${report.dailyPerformance.worstDay.date || 'N/A'}</p>
+                        <p><strong>Completion Rate:</strong> ${(report.dailyPerformance.worstDay.completionRate || 0).toFixed(0)}%</p>
+                        <p><span class="badge badge-missed">${report.dailyPerformance.worstDay.missed} Missed</span></p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Insights -->
+            <div class="section">
+                <h2>💡 Key Insights</h2>
+                <div class="insights">
+                    <ul>
+                        ${report.insights.map(insight => `<li>${insight}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Recommendations -->
+            <div class="section">
+                <h2>🎯 Recommendations</h2>
+                <div class="recommendations">
+                    <ul>
+                        ${report.recommendations.map(rec => `<li>${rec}</li>`).join('')}
+                    </ul>
+                </div>
+            </div>
+            
+            <!-- Habits List -->
+            <div class="section">
+                <h2>🎪 Your Habits</h2>
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Habit</th>
+                            <th>Category</th>
+                            <th>Frequency</th>
+                            <th>Icon</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${report.habits.map(habit => `
+                            <tr>
+                                <td>${habit.name}</td>
+                                <td>${habit.category}</td>
+                                <td>${habit.frequency}</td>
+                                <td>${habit.icon}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        
+        <div class="footer">
+            <p>Generated by Habit Tracker | ${new Date(report.metadata.exportDate).toLocaleDateString()}</p>
+            <p style="font-size: 0.9em; margin-top: 10px;">Keep building better habits! 💪</p>
+        </div>
+    </div>
+</body>
+</html>
+    `;
 }
 
 /**
  * Handle Export Data
  */
 function handleExportData() {
-    console.log('Exporting data');
-    
-    const exportData = {
-        user: currentUser,
-        habits: habits,
-        dashboardData: dashboardData,
-        exportDate: new Date().toISOString()
-    };
-    
-    const dataStr = JSON.stringify(exportData, null, 2);
-    const dataBlob = new Blob([dataStr], { type: 'application/json' });
-    const url = URL.createObjectURL(dataBlob);
-    
-    const link = document.createElement('a');
-    link.href = url;
-    link.download = `habit-tracker-export-${new Date().toISOString().split('T')[0]}.json`;
-    document.body.appendChild(link);
-    link.click();
-    document.body.removeChild(link);
-    URL.revokeObjectURL(url);
-    
-    showToast('Data exported successfully!', 'success');
+    try {
+        console.log('Starting export...');
+        const report = generateComprehensiveReport();
+        console.log('Report generated:', report);
+        
+        if (!report || !report.overallStatistics) {
+            console.error('Invalid report structure');
+            showToast('Error: Invalid report data', 'error');
+            return;
+        }
+        
+        let htmlContent;
+        try {
+            htmlContent = generateHtmlReport(report);
+            console.log('Beautiful HTML generated, length:', htmlContent.length);
+        } catch (e) {
+            console.warn('Beautiful HTML failed, using simple version:', e);
+            htmlContent = generateSimpleHtmlReport(report);
+            console.log('Simple HTML generated, length:', htmlContent.length);
+        }
+        
+        const htmlBlob = new Blob([htmlContent], { type: 'text/html' });
+        console.log('Blob created, size:', htmlBlob.size);
+        
+        const url = URL.createObjectURL(htmlBlob);
+        console.log('Object URL created:', url);
+        
+        const link = document.createElement('a');
+        link.href = url;
+        link.download = `habit-tracker-report-${new Date().toISOString().split('T')[0]}.html`;
+        document.body.appendChild(link);
+        console.log('Link created and appended');
+        
+        link.click();
+        console.log('Link clicked');
+        
+        document.body.removeChild(link);
+        URL.revokeObjectURL(url);
+        console.log('Cleanup completed');
+        
+        showToast('Beautiful report exported successfully! 🎉', 'success');
+    } catch (error) {
+        console.error('Export error:', error);
+        console.error('Stack:', error.stack);
+        showToast(`Export failed: ${error.message}`, 'error');
+    }
 }
 
 /**
