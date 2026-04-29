@@ -88,18 +88,18 @@ try {
         ? round(($rateData['completed'] / $rateData['total']) * 100)
         : 0;
 
-    // Get weekly overview (last 7 days)
-    $weeklyQuery = "SELECT
-                      DATE(hc.completion_date) as date,
-                      COUNT(CASE WHEN hc.status = 'completed' THEN 1 END) as completed,
-                      COUNT(*) as total
-                    FROM habit_completions hc
-                    INNER JOIN habits h ON hc.habit_id = h.id
-                    WHERE h.user_id = :user_id
-                      AND hc.completion_date >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
-                      AND hc.completion_date <= CURDATE()
-                    GROUP BY DATE(hc.completion_date)
-                    ORDER BY date ASC";
+        // Get weekly overview (last 7 days)
+        $weeklyQuery = "SELECT
+                                            DATE(hc.completion_date) as date,
+                                            COUNT(CASE WHEN hc.status = 'completed' THEN 1 END) as completed
+                                        FROM habit_completions hc
+                                        INNER JOIN habits h ON hc.habit_id = h.id
+                                        WHERE h.user_id = :user_id
+                                            AND h.is_archived = FALSE
+                                            AND hc.completion_date >= DATE_SUB(CURDATE(), INTERVAL 6 DAY)
+                                            AND hc.completion_date <= CURDATE()
+                                        GROUP BY DATE(hc.completion_date)
+                                        ORDER BY date ASC";
     $weeklyStmt = $db->prepare($weeklyQuery);
     $weeklyStmt->bindParam(':user_id', $user_id);
     $weeklyStmt->execute();
@@ -107,17 +107,19 @@ try {
 
     // Fill in missing days with 0 values
     $response['weekly_overview'] = [];
+    $weeklyTotal = (int)$response['active_habits'];
     for ($i = 6; $i >= 0; $i--) {
         $date = date('Y-m-d', strtotime("-$i days"));
         $found = false;
         foreach ($weeklyData as $day) {
             if ($day['date'] === $date) {
+                $completed = (int)$day['completed'];
                 $response['weekly_overview'][] = [
                     'date' => $date,
                     'day' => date('D', strtotime($date)),
-                    'completed' => (int)$day['completed'],
-                    'total' => (int)$day['total'],
-                    'percentage' => $day['total'] > 0 ? round(($day['completed'] / $day['total']) * 100) : 0
+                    'completed' => $completed,
+                    'total' => $weeklyTotal,
+                    'percentage' => $weeklyTotal > 0 ? round(($completed / $weeklyTotal) * 100) : 0
                 ];
                 $found = true;
                 break;
@@ -128,7 +130,7 @@ try {
                 'date' => $date,
                 'day' => date('D', strtotime($date)),
                 'completed' => 0,
-                'total' => 0,
+                'total' => $weeklyTotal,
                 'percentage' => 0
             ];
         }

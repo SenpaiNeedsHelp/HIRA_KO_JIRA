@@ -251,6 +251,8 @@ async function loadHabits(archived = false, category = null) {
         if (result.success) {
             habits = result.habits;
 
+            updateCategoryFilterOptions(habits);
+
             let visibleHabits = [...habits];
 
             if (selectedHabitCategory !== 'all') {
@@ -266,6 +268,38 @@ async function loadHabits(archived = false, category = null) {
     } catch (error) {
         console.error('Load habits error:', error);
         showToast('Error loading habits', 'error');
+    }
+}
+
+function updateCategoryFilterOptions(habitsList) {
+    const categoryFilter = document.getElementById('habits-category-filter');
+    if (!categoryFilter) {
+        return;
+    }
+
+    const categories = new Set(DEFAULT_CATEGORIES);
+    (habitsList || []).forEach(habit => {
+        if (habit.category) {
+            categories.add(habit.category);
+        }
+    });
+
+    const sortedCategories = Array.from(categories).sort((a, b) => a.localeCompare(b));
+    categoryFilter.innerHTML = '<option value="all">All Categories</option>';
+
+    sortedCategories.forEach(category => {
+        const option = document.createElement('option');
+        option.value = category;
+        option.textContent = category;
+        if (category === selectedHabitCategory) {
+            option.selected = true;
+        }
+        categoryFilter.appendChild(option);
+    });
+
+    if (selectedHabitCategory !== 'all' && !categories.has(selectedHabitCategory)) {
+        selectedHabitCategory = 'all';
+        categoryFilter.value = 'all';
     }
 }
 
@@ -361,6 +395,20 @@ function sortHabitsList(habitsList, sortBy) {
  * Setup Event Listeners
  */
 function setupEventListeners() {
+    // Theme toggle
+    const themeToggle = document.getElementById('theme-toggle');
+    if (themeToggle) {
+        themeToggle.addEventListener('click', toggleTheme);
+    }
+
+    const savedTheme = localStorage.getItem('habit-tracker-theme');
+    if (savedTheme === 'dark') {
+        document.documentElement.classList.add('dark');
+        updateThemeIcon('dark');
+    } else {
+        updateThemeIcon('light');
+    }
+
     // Navigation
     document.querySelectorAll('.nav-btn').forEach(btn => {
         btn.addEventListener('click', (e) => {
@@ -398,33 +446,273 @@ function setupEventListeners() {
 
     // New Habit buttons
     document.querySelectorAll('button').forEach(btn => {
-        if (btn.textContent.includes('New Habit')) {
-            btn.addEventListener('click', showNewHabitModal);
+        if (btn.textContent.includes('New Habit') || btn.textContent.includes('Create Your First Habit')) {
+            btn.addEventListener('click', openNewHabitModal);
+        }
+    });
+}
+
+const NEW_HABIT_ICONS = ['💧', '🏃', '📖', '🧘', '💻', '🎨', '🎵', '🥦', '💰'];
+const DEFAULT_HABIT_ICON = NEW_HABIT_ICONS[0];
+const DEFAULT_CATEGORIES = ['Health', 'Study', 'Work', 'Personal', 'Fitness', 'Mind', 'Social', 'Other'];
+
+function buildNewHabitModal() {
+    return `
+        <div id="new-habit-modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="new-habit-title">
+            <div class="modal-content new-habit-modal">
+                <div class="modal-header">
+                    <h2 id="new-habit-title">Create New Habit</h2>
+                    <button class="close-btn" type="button" data-modal-close aria-label="Close">&times;</button>
+                </div>
+                <form id="new-habit-form" class="new-habit-form">
+                    <div class="field">
+                        <label for="habit-name">Habit Name</label>
+                        <input type="text" id="habit-name" name="name" required placeholder="e.g., Drink Water" />
+                    </div>
+                    <div class="field">
+                        <label for="habit-desc">Description (Optional)</label>
+                        <textarea id="habit-desc" name="description" placeholder="e.g., 8 glasses per day"></textarea>
+                    </div>
+                    <div class="field">
+                        <label for="habit-category-select">Category</label>
+                        <select id="habit-category-select" name="category">
+                            <option value="" selected disabled>Select a category</option>
+                        </select>
+                        <span class="field-hint">Pick one or add a custom category below.</span>
+                    </div>
+                    <div class="field">
+                        <label for="habit-category-custom">Custom Category</label>
+                        <input type="text" id="habit-category-custom" name="custom_category" maxlength="50" placeholder="e.g., Nutrition" />
+                    </div>
+                    <div class="field">
+                        <label>Icon</label>
+                        <div class="icon-selector">
+                            <div class="predefined-icons icon-grid" role="listbox" aria-label="Choose an icon">
+                                ${NEW_HABIT_ICONS.map(icon => `
+                                    <button type="button" class="icon-option" data-icon="${icon}" aria-pressed="false">${icon}</button>
+                                `).join('')}
+                                <button type="button" class="icon-option icon-add" id="add-custom-icon" aria-label="Add custom icon">+</button>
+                            </div>
+                            <div class="icon-custom" id="custom-icon-row" hidden>
+                                <input type="text" id="custom-icon-input" placeholder="Paste emoji" aria-label="Custom icon" autocomplete="off" />
+                                <button type="button" class="btn-ghost" id="custom-icon-apply">Add</button>
+                            </div>
+                            <div class="icon-preview" aria-live="polite">
+                                <span class="icon-preview-label">Selected</span>
+                                <span class="icon-preview-value" id="selected-icon-preview">${DEFAULT_HABIT_ICON}</span>
+                            </div>
+                            <input type="hidden" id="habit-icon-input" name="icon" />
+                        </div>
+                    </div>
+                    <div class="modal-footer">
+                        <button type="button" class="btn-ghost" data-modal-close>Cancel</button>
+                        <button type="submit" class="btn-primary">Create Habit</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    `;
+}
+
+/**
+ * New Habit Modal
+ */
+function openNewHabitModal() {
+    const modalContainer = document.getElementById('modal-container');
+    if (!modalContainer) {
+        return;
+    }
+
+    modalContainer.innerHTML = buildNewHabitModal();
+    const modal = document.getElementById('new-habit-modal');
+    const form = modal.querySelector('#new-habit-form');
+    const iconInput = modal.querySelector('#habit-icon-input');
+    const iconPreview = modal.querySelector('#selected-icon-preview');
+    const iconGrid = modal.querySelector('.icon-grid');
+    const addCustomBtn = modal.querySelector('#add-custom-icon');
+    const customRow = modal.querySelector('#custom-icon-row');
+    const customInput = modal.querySelector('#custom-icon-input');
+    const customApply = modal.querySelector('#custom-icon-apply');
+    const categorySelect = modal.querySelector('#habit-category-select');
+    const categoryCustom = modal.querySelector('#habit-category-custom');
+
+    const setSelectedIcon = (icon, button) => {
+        iconInput.value = icon;
+        iconPreview.textContent = icon;
+        modal.querySelectorAll('.icon-option').forEach(btn => {
+            btn.classList.remove('selected');
+            btn.setAttribute('aria-pressed', 'false');
+        });
+        if (button) {
+            button.classList.add('selected');
+            button.setAttribute('aria-pressed', 'true');
+        }
+    };
+
+    const createIconButton = (icon) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'icon-option';
+        btn.dataset.icon = icon;
+        btn.textContent = icon;
+        btn.setAttribute('aria-pressed', 'false');
+        btn.addEventListener('click', () => setSelectedIcon(icon, btn));
+        return btn;
+    };
+
+    const addCustomIcon = () => {
+        const icon = customInput.value.trim();
+        if (!icon) {
+            showToast('Add an emoji first.', 'error');
+            customInput.focus();
+            return;
+        }
+
+        const existing = Array.from(iconGrid.querySelectorAll('.icon-option[data-icon]'))
+            .find(btn => btn.dataset.icon === icon);
+        if (existing) {
+            setSelectedIcon(icon, existing);
+            customInput.value = '';
+            customRow.hidden = true;
+            return;
+        }
+
+        const customBtn = createIconButton(icon);
+        iconGrid.insertBefore(customBtn, addCustomBtn);
+        setSelectedIcon(icon, customBtn);
+        customInput.value = '';
+        customRow.hidden = true;
+    };
+
+    const setCategoryOptions = (categories) => {
+        const unique = Array.from(new Set(categories.filter(Boolean).map(c => c.trim()).filter(Boolean)));
+        unique.sort((a, b) => a.localeCompare(b));
+        categorySelect.innerHTML = '<option value="" selected disabled>Select a category</option>';
+        unique.forEach(category => {
+            const option = document.createElement('option');
+            option.value = category;
+            option.textContent = category;
+            categorySelect.appendChild(option);
+        });
+    };
+
+    const collectExistingCategories = async () => {
+        const categories = new Set(DEFAULT_CATEGORIES);
+
+        if (Array.isArray(habits) && habits.length > 0) {
+            habits.forEach(habit => {
+                if (habit.category) {
+                    categories.add(habit.category);
+                }
+            });
+            setCategoryOptions(Array.from(categories));
+            return;
+        }
+
+        try {
+            const result = await HabitAPI.getHabits(false);
+            if (result.success && Array.isArray(result.habits)) {
+                result.habits.forEach(habit => {
+                    if (habit.category) {
+                        categories.add(habit.category);
+                    }
+                });
+            }
+        } catch (error) {
+            console.error('Failed to load categories:', error);
+        }
+
+        setCategoryOptions(Array.from(categories));
+    };
+
+    modal.querySelectorAll('.icon-option[data-icon]').forEach(btn => {
+        btn.addEventListener('click', () => setSelectedIcon(btn.dataset.icon, btn));
+    });
+
+    addCustomBtn.addEventListener('click', () => {
+        customRow.hidden = !customRow.hidden;
+        if (!customRow.hidden) {
+            customInput.focus();
         }
     });
 
-    // Theme toggle
-    const themeToggle = document.getElementById('theme-toggle');
-    if (themeToggle) {
-        themeToggle.addEventListener('click', toggleTheme);
+    categorySelect.addEventListener('change', () => {
+        if (categorySelect.value) {
+            categoryCustom.value = '';
+        }
+    });
+
+    categoryCustom.addEventListener('input', () => {
+        if (categoryCustom.value.trim()) {
+            categorySelect.value = '';
+        }
+    });
+
+    customApply.addEventListener('click', addCustomIcon);
+    customInput.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter') {
+            event.preventDefault();
+            addCustomIcon();
+        }
+    });
+
+    modal.querySelectorAll('[data-modal-close]').forEach(btn => {
+        btn.addEventListener('click', closeNewHabitModal);
+    });
+
+    modal.addEventListener('click', (event) => {
+        if (event.target === modal) {
+            closeNewHabitModal();
+        }
+    });
+
+    form.addEventListener('submit', handleNewHabitSubmit);
+    setSelectedIcon(DEFAULT_HABIT_ICON, modal.querySelector(`.icon-option[data-icon="${DEFAULT_HABIT_ICON}"]`));
+    collectExistingCategories();
+    modal.querySelector('#habit-name').focus();
+}
+
+function closeNewHabitModal() {
+    const modalContainer = document.getElementById('modal-container');
+    if (modalContainer) {
+        modalContainer.innerHTML = '';
+    }
+}
+
+async function handleNewHabitSubmit(e) {
+    e.preventDefault();
+    const form = e.target;
+    const formData = new FormData(form);
+    const data = Object.fromEntries(formData.entries());
+
+    const selectedCategory = (data.category || '').trim();
+    const customCategory = (data.custom_category || '').trim();
+    const resolvedCategory = customCategory || selectedCategory;
+
+    const payload = {
+        name: (data.name || '').trim(),
+        description: (data.description || '').trim(),
+        category: resolvedCategory,
+        icon: (data.icon || '').trim()
+    };
+
+    if (!payload.name || !payload.category || !payload.icon) {
+        showToast('Please fill all required fields.', 'error');
+        return;
     }
 
-    // Profile theme toggle
-    const profileThemeToggle = document.getElementById('profile-theme-toggle');
-    if (profileThemeToggle) {
-        profileThemeToggle.addEventListener('click', toggleTheme);
-        // Update initial state
-        const isDark = document.documentElement.classList.contains('dark');
-        profileThemeToggle.setAttribute('aria-checked', isDark ? 'true' : 'false');
-    }
-
-    // Logout (if exists in profile)
-    const logoutBtn = document.getElementById('logout-btn');
-    if (logoutBtn) {
-        logoutBtn.addEventListener('click', async () => {
-            await HabitAPI.logout();
-            window.location.href = 'index.html';
-        });
+    try {
+        const result = await HabitAPI.createHabit(payload);
+        if (result.success) {
+            showToast('Habit created successfully!', 'success');
+            closeNewHabitModal();
+            await initializeDashboard();
+            await loadHabits(currentHabitsArchived);
+        } else {
+            showToast(result.message || 'Failed to create habit.', 'error');
+        }
+    } catch (error) {
+        showToast('An error occurred: ' + error.message, 'error');
     }
 }
 
@@ -561,203 +849,3 @@ async function deleteHabit(habitId) {
 }
 
 window.deleteHabit = deleteHabit;
-
-/**
- * New Habit Modal
- */
-function showNewHabitModal() {
-    const modal = document.getElementById('modal-backdrop');
-    if (!modal) {
-        // Create modal dynamically
-        createNewHabitModal();
-        return;
-    }
-
-    // Show existing modal
-    const modalBox = modal.querySelector('.modal-box');
-    modalBox.innerHTML = `
-        <h3>Create New Habit</h3>
-        <form id="new-habit-form" style="margin: 20px 0;">
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Habit Name <span style="color: #e53935;">*</span></label>
-                <input type="text" id="habit-name" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;">
-            </div>
-
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Category</label>
-                <select id="habit-category" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;">
-                    <option value="Health">Health</option>
-                    <option value="Fitness">Fitness</option>
-                    <option value="Study">Study</option>
-                    <option value="Work">Work</option>
-                    <option value="Mind">Mind</option>
-                    <option value="Personal">Personal</option>
-                    <option value="Social">Social</option>
-                    <option value="Other">Other</option>
-                </select>
-            </div>
-
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Description</label>
-                <textarea id="habit-description" rows="3" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
-            </div>
-
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Icon (Emoji)</label>
-                <input type="text" id="habit-icon" value="⭐" maxlength="2" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 24px; text-align: center;">
-            </div>
-
-            <div style="margin-bottom: 16px;">
-                <label style="display: block; margin-bottom: 8px; font-weight: 600;">Color</label>
-                <input type="color" id="habit-color" value="#4CAF50" style="width: 100%; height: 50px; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer;">
-            </div>
-        </form>
-
-        <div class="modal-actions">
-            <button class="btn-primary" id="create-habit-btn" type="button">Create Habit</button>
-            <button class="btn-ghost" id="cancel-habit-btn" type="button">Cancel</button>
-        </div>
-    `;
-
-    modal.style.display = 'flex';
-
-    // Event listeners
-    document.getElementById('create-habit-btn').addEventListener('click', handleCreateHabit);
-    document.getElementById('cancel-habit-btn').addEventListener('click', () => {
-        modal.style.display = 'none';
-    });
-
-    // Close on backdrop click
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.style.display = 'none';
-        }
-    });
-}
-
-function createNewHabitModal() {
-    const modal = document.createElement('div');
-    modal.id = 'habit-modal';
-    modal.className = 'modal-backdrop';
-    modal.style.cssText = 'display: flex; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background: rgba(0,0,0,0.5); z-index: 1000; align-items: center; justify-content: center;';
-
-    modal.innerHTML = `
-        <div class="modal-box" style="background: white; padding: 30px; border-radius: 16px; max-width: 500px; width: 90%; max-height: 90vh; overflow-y: auto;">
-            <h3>Create New Habit</h3>
-            <form id="new-habit-form" style="margin: 20px 0;">
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Habit Name <span style="color: #e53935;">*</span></label>
-                    <input type="text" id="habit-name" required style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;">
-                </div>
-
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Category</label>
-                    <select id="habit-category" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px;">
-                        <option value="Health">Health</option>
-                        <option value="Fitness">Fitness</option>
-                        <option value="Study">Study</option>
-                        <option value="Work">Work</option>
-                        <option value="Mind">Mind</option>
-                        <option value="Personal">Personal</option>
-                        <option value="Social">Social</option>
-                        <option value="Other">Other</option>
-                    </select>
-                </div>
-
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Description</label>
-                    <textarea id="habit-description" rows="3" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 14px; resize: vertical;"></textarea>
-                </div>
-
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Icon (Emoji)</label>
-                    <input type="text" id="habit-icon" value="⭐" maxlength="2" style="width: 100%; padding: 10px; border: 1px solid #cbd5e1; border-radius: 8px; font-size: 24px; text-align: center;">
-                </div>
-
-                <div style="margin-bottom: 16px;">
-                    <label style="display: block; margin-bottom: 8px; font-weight: 600;">Color</label>
-                    <input type="color" id="habit-color" value="#4CAF50" style="width: 100%; height: 50px; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer;">
-                </div>
-            </form>
-
-            <div class="modal-actions" style="display: flex; gap: 12px; justify-content: flex-end;">
-                <button class="btn-ghost" id="cancel-habit-btn" type="button" style="padding: 10px 20px; border: 1px solid #cbd5e1; border-radius: 8px; cursor: pointer; background: white;">Cancel</button>
-                <button class="btn-primary" id="create-habit-btn" type="button" style="padding: 10px 20px; border: none; border-radius: 8px; cursor: pointer; background: #4CAF50; color: white; font-weight: 600;">Create Habit</button>
-            </div>
-        </div>
-    `;
-
-    document.body.appendChild(modal);
-
-    // Event listeners
-    document.getElementById('create-habit-btn').addEventListener('click', handleCreateHabit);
-    document.getElementById('cancel-habit-btn').addEventListener('click', () => {
-        modal.style.display = 'none';
-    });
-
-    modal.addEventListener('click', (e) => {
-        if (e.target === modal) {
-            modal.style.display = 'none';
-        }
-    });
-}
-
-async function handleCreateHabit() {
-    const name = document.getElementById('habit-name').value.trim();
-    const category = document.getElementById('habit-category').value;
-    const description = document.getElementById('habit-description').value.trim();
-    const icon = document.getElementById('habit-icon').value || '⭐';
-    const color = document.getElementById('habit-color').value;
-
-    if (!name) {
-        showToast('Please enter a habit name', 'error');
-        return;
-    }
-
-    const habitData = {
-        name,
-        category,
-        description,
-        icon,
-        color,
-        frequency: 'daily'
-    };
-
-    showLoading();
-
-    try {
-        const result = await HabitAPI.createHabit(habitData);
-
-        if (result.success) {
-            showToast('Habit created successfully!', 'success');
-
-            // Close modal
-            const modal = document.getElementById('habit-modal') || document.getElementById('modal-backdrop');
-            if (modal) modal.style.display = 'none';
-
-            // Refresh dashboard
-            await initializeDashboard();
-
-            // If on habits view, reload habits
-            if (currentView === 'habits') {
-                await loadHabits(false);
-            }
-        } else {
-            showToast('Failed to create habit: ' + result.message, 'error');
-        }
-    } catch (error) {
-        console.error('Create habit error:', error);
-        showToast('Error creating habit', 'error');
-    } finally {
-        hideLoading();
-    }
-}
-
-// Initialize theme on load
-const savedTheme = localStorage.getItem('habit-tracker-theme') || 'light';
-if (savedTheme === 'dark') {
-    document.documentElement.classList.add('dark');
-} else {
-    document.documentElement.classList.remove('dark');
-}
-updateThemeIcon(savedTheme);

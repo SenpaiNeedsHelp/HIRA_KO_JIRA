@@ -24,7 +24,11 @@ if (empty($data['name'])) {
 }
 
 $name = trim($data['name']);
-$category = $data['category'] ?? 'Other';
+$category = isset($data['category']) ? trim($data['category']) : 'Other';
+if ($category === '') {
+    $category = 'Other';
+}
+$category = mb_substr($category, 0, 50);
 $description = $data['description'] ?? null;
 $color = $data['color'] ?? '#4CAF50';
 $icon = $data['icon'] ?? '⭐';

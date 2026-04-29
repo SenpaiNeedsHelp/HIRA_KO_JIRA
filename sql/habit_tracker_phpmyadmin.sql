@@ -49,7 +49,7 @@ CREATE TABLE IF NOT EXISTS `habits` (
     `id` INT UNSIGNED AUTO_INCREMENT PRIMARY KEY,
     `user_id` INT UNSIGNED NOT NULL,
     `name` VARCHAR(255) NOT NULL,
-    `category` ENUM('Health', 'Study', 'Work', 'Personal', 'Fitness', 'Mind', 'Social', 'Other') NOT NULL DEFAULT 'Other',
+    `category` VARCHAR(50) NOT NULL DEFAULT 'Other',
     `description` TEXT NULL,
     `color` VARCHAR(7) NULL COMMENT 'Hex color code for UI display',
     `icon` VARCHAR(50) NULL COMMENT 'Icon identifier or emoji',
