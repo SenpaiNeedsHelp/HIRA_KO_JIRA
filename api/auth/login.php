@@ -33,7 +33,7 @@ if (!filter_var($email, FILTER_VALIDATE_EMAIL)) {
 
 try {
     // Fetch user
-    $query = "SELECT id, email, password_hash, name, avatar, level, xp, current_streak, best_streak, is_verified
+    $query = "SELECT id, email, password_hash, name, avatar, level, xp, current_streak, best_streak
               FROM users
               WHERE email = :email AND is_active = TRUE
               LIMIT 1";
@@ -56,14 +56,6 @@ try {
             'success' => false,
             'message' => 'Invalid email or password'
         ], 401);
-    }
-
-    // Email verification check
-    if (!$user['is_verified']) {
-        sendResponse([
-            'success' => false,
-            'message' => 'Please verify your email before login'
-        ], 403);
     }
 
     // Update last login

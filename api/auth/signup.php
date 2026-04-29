@@ -37,29 +37,22 @@ try {
     }
 
     $password_hash = password_hash($password, PASSWORD_BCRYPT);
-    $token = generateVerificationToken();
 
-    // Insert user (NOT verified)
+    // Insert user
     $stmt = $db->prepare("
-        INSERT INTO users (email, password_hash, name, is_verified, verification_token)
-        VALUES (:email, :password, :name, 0, :token)
+        INSERT INTO users (email, password_hash, name)
+        VALUES (:email, :password, :name)
     ");
 
     $stmt->execute([
         ':email' => $email,
         ':password' => $password_hash,
-        ':name' => $name,
-        ':token' => $token
+        ':name' => $name
     ]);
-
-    // 👉 Normally send email here (skipped)
-    // Example verification link:
-    // http://localhost/api/auth/verify-email.php?token=XXXX
 
     sendResponse([
         'success' => true,
-        'message' => 'Registered. Please verify your email.',
-        'verification_token' => $token // remove in production
+        'message' => 'Registered successfully.'
     ], 201);
 
 } catch (PDOException $e) {
