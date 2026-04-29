@@ -939,6 +939,38 @@ function setupCalendarNavigation() {
     }
 }
 
+function getCalendarTooltip() {
+    return document.getElementById('hm-tooltip');
+}
+
+function showCalendarTooltip(date, event) {
+    const tooltip = getCalendarTooltip();
+    if (!tooltip) return;
+
+    const dateKey = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+    const dayData = heatMapData[dateKey] || { completed: 0, missed: 0, pending: 0 };
+    document.getElementById('hm-tt-date').textContent = formatDateShort(date);
+    document.getElementById('hm-tt-habits').textContent = `${dayData.completed} completed, ${dayData.missed} missed, ${dayData.pending} pending`;
+    document.getElementById('hm-tt-pct').textContent = `${Math.round((dayData.completed / (dayData.completed + dayData.missed + dayData.pending || 1)) * 100)}%`;
+    tooltip.style.display = 'block';
+    moveCalendarTooltip(event);
+}
+
+function moveCalendarTooltip(event) {
+    const tooltip = getCalendarTooltip();
+    if (!tooltip) return;
+    const offsetX = 0;
+    const offsetY = 14;
+    tooltip.style.left = `${event.clientX - tooltip.offsetWidth / 2 + offsetX}px`;
+    tooltip.style.top = `${event.clientY - tooltip.offsetHeight - offsetY}px`;
+}
+
+function hideCalendarTooltip() {
+    const tooltip = getCalendarTooltip();
+    if (!tooltip) return;
+    tooltip.style.display = 'none';
+}
+
 /**
  * Render Heatmap (Last 90 Days)
  */
@@ -964,31 +996,14 @@ function renderHeatmap() {
         if (status === 'none') cell.style.opacity = '0.3';
         
         // Add hover tooltip
-        cell.addEventListener('mouseenter', (e) => {
-            const tooltip = document.getElementById('hm-tooltip');
-            if (tooltip) {
-                document.getElementById('hm-tt-date').textContent = formatDateShort(date);
-                const dateKey = date.getFullYear() + '-' + 
-                               String(date.getMonth() + 1).padStart(2, '0') + '-' + 
-                               String(date.getDate()).padStart(2, '0');
-                const dayData = heatMapData[dateKey] || { completed: 0, missed: 0, pending: 0 };
-                document.getElementById('hm-tt-habits').textContent = 
-                    `${dayData.completed} completed, ${dayData.missed} missed, ${dayData.pending} pending`;
-                document.getElementById('hm-tt-pct').textContent = 
-                    `${Math.round((dayData.completed / (dayData.completed + dayData.missed + dayData.pending || 1)) * 100)}%`;
-                tooltip.style.display = 'block';
-            }
-        });
+        cell.addEventListener('mouseenter', (e) => showCalendarTooltip(date, e));
+        cell.addEventListener('mousemove', moveCalendarTooltip);
+        cell.addEventListener('mouseleave', hideCalendarTooltip);
         
         cell.addEventListener('click', () => selectDay(date));
         if (isSameDay(date, calendarState.selectedDay)) {
             cell.classList.add('selected');
         }
-        
-        cell.addEventListener('mouseleave', () => {
-            const tooltip = document.getElementById('hm-tooltip');
-            if (tooltip) tooltip.style.display = 'none';
-        });
         
         grid.appendChild(cell);
     }
@@ -1086,28 +1101,9 @@ function createMonthDayElement(date, otherMonth) {
 
     if (!otherMonth) {
         cell.addEventListener('click', () => selectDay(date));
-        
-        // Add tooltip for month view
-        cell.addEventListener('mouseenter', (e) => {
-            const tooltip = document.getElementById('hm-tooltip');
-            if (tooltip) {
-                document.getElementById('hm-tt-date').textContent = formatDateShort(date);
-                const dateKey = date.getFullYear() + '-' + 
-                               String(date.getMonth() + 1).padStart(2, '0') + '-' + 
-                               String(date.getDate()).padStart(2, '0');
-                const dayData = heatMapData[dateKey] || { completed: 0, missed: 0, pending: 0 };
-                document.getElementById('hm-tt-habits').textContent = 
-                    `${dayData.completed} completed, ${dayData.missed} missed, ${dayData.pending} pending`;
-                document.getElementById('hm-tt-pct').textContent = 
-                    `${Math.round((dayData.completed / (dayData.completed + dayData.missed + dayData.pending || 1)) * 100)}%`;
-                tooltip.style.display = 'block';
-            }
-        });
-        
-        cell.addEventListener('mouseleave', () => {
-            const tooltip = document.getElementById('hm-tooltip');
-            if (tooltip) tooltip.style.display = 'none';
-        });
+        cell.addEventListener('mouseenter', (e) => showCalendarTooltip(date, e));
+        cell.addEventListener('mousemove', moveCalendarTooltip);
+        cell.addEventListener('mouseleave', hideCalendarTooltip);
     }
 
     return cell;
@@ -1169,28 +1165,9 @@ function renderWeekView() {
         }
 
         col.addEventListener('click', () => selectDay(date));
-        
-        // Add tooltip for week view
-        col.addEventListener('mouseenter', (e) => {
-            const tooltip = document.getElementById('hm-tooltip');
-            if (tooltip) {
-                document.getElementById('hm-tt-date').textContent = formatDateShort(date);
-                const dateKey = date.getFullYear() + '-' + 
-                               String(date.getMonth() + 1).padStart(2, '0') + '-' + 
-                               String(date.getDate()).padStart(2, '0');
-                const dayData = heatMapData[dateKey] || { completed: 0, missed: 0, pending: 0 };
-                document.getElementById('hm-tt-habits').textContent = 
-                    `${dayData.completed} completed, ${dayData.missed} missed, ${dayData.pending} pending`;
-                document.getElementById('hm-tt-pct').textContent = 
-                    `${Math.round((dayData.completed / (dayData.completed + dayData.missed + dayData.pending || 1)) * 100)}%`;
-                tooltip.style.display = 'block';
-            }
-        });
-        
-        col.addEventListener('mouseleave', () => {
-            const tooltip = document.getElementById('hm-tooltip');
-            if (tooltip) tooltip.style.display = 'none';
-        });
+        col.addEventListener('mouseenter', (e) => showCalendarTooltip(date, e));
+        col.addEventListener('mousemove', moveCalendarTooltip);
+        col.addEventListener('mouseleave', hideCalendarTooltip);
         grid.appendChild(col);
     }
     
