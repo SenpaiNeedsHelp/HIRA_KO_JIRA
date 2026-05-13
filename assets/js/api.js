@@ -110,6 +110,18 @@ const HabitAPI = {
         return await this.request(url);
     },
 
+    async updateProfile(profileData) {
+        return await this.request('/auth/update.php', 'POST', profileData);
+    },
+
+    async getCalendarHeatmap() {
+        return await this.request('/calendar/heatmap.php');
+    },
+
+    async getHeatmapStats() {
+        return await this.request('/stats/heatmap.php');
+    },
+
     async createHabit(habitData) {
         return await this.request('/habits/create.php', 'POST', habitData);
     },

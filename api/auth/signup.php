@@ -50,6 +50,14 @@ try {
         ':name' => $name
     ]);
 
+    $user_id = $db->lastInsertId();
+
+    // Create default settings
+    $settingsStmt = $db->prepare("INSERT INTO user_settings (user_id, theme, notifications_enabled, weekly_report_enabled)
+                                  VALUES (:user_id, 'auto', FALSE, FALSE)");
+    $settingsStmt->bindParam(':user_id', $user_id);
+    $settingsStmt->execute();
+
     sendResponse([
         'success' => true,
         'message' => 'Registered successfully.'
