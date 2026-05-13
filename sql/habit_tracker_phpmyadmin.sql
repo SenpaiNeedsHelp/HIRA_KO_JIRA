@@ -133,7 +133,7 @@ CREATE TABLE IF NOT EXISTS `user_settings` (
 -- SAMPLE DATA (for testing)
 -- ============================================
 
--- Insert sample user (password: 'password123' - hashed with bcrypt)
+-- Insert sample user (password: 'password' - hashed with bcrypt)
 -- Note: In production, use proper password hashing on the backend
 INSERT INTO `users` (`email`, `password_hash`, `name`, `level`, `xp`) VALUES
 ('demo@habittracker.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Demo User', 1, 0);

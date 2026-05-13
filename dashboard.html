@@ -192,15 +192,18 @@
           <h3 class="cal-panel-label">Last 90 Days</h3>
           <div class="heatmap-grid" id="heatmap-grid"></div>
           <div class="heatmap-legend">
-            <span class="legend-text">Less</span>
-            <div class="legend-dots">
-              <span class="legend-dot ld-0"></span>
-              <span class="legend-dot ld-1"></span>
-              <span class="legend-dot ld-2"></span>
-              <span class="legend-dot ld-3"></span>
-              <span class="legend-dot ld-4"></span>
+            <div class="legend-item">
+              <span class="legend-dot ld-missed"></span>
+              <span class="legend-text">Missed</span>
             </div>
-            <span class="legend-text">More</span>
+            <div class="legend-item">
+              <span class="legend-dot ld-pending"></span>
+              <span class="legend-text">Pending</span>
+            </div>
+            <div class="legend-item">
+              <span class="legend-dot ld-completed"></span>
+              <span class="legend-text">Completed</span>
+            </div>
           </div>
         </article>
 
@@ -359,20 +362,18 @@
             <div class="settings-row">
               <div>
                 <p class="settings-label">Notifications</p>
-                <p class="settings-sub">Daily reminders (coming soon)</p>
+                <p class="settings-sub">Daily reminders at your chosen time</p>
               </div>
-              <button class="toggle-switch" role="switch" aria-checked="false" disabled type="button">
+              <button class="toggle-switch" id="profile-notifications-toggle" role="switch" aria-checked="false" type="button">
                 <span class="toggle-thumb"></span>
               </button>
             </div>
             <div class="settings-row">
               <div>
-                <p class="settings-label">Weekly Report</p>
-                <p class="settings-sub">Summary emails (coming soon)</p>
+                <p class="settings-label">Reminder time</p>
+                <p class="settings-sub">Pick the time for daily habit reminders</p>
               </div>
-              <button class="toggle-switch" role="switch" aria-checked="false" disabled type="button">
-                <span class="toggle-thumb"></span>
-              </button>
+              <input class="settings-time-input" id="profile-notification-time" type="time" />
             </div>
           </div>
         </article>
@@ -387,6 +388,13 @@
                 <p class="settings-sub">Download your habit history as JSON</p>
               </div>
               <button class="btn-ghost" id="export-btn" type="button">Export</button>
+            </div>
+            <div class="settings-row">
+              <div>
+                <p class="settings-label">Weekly Report</p>
+                <p class="settings-sub">Download a summary for the last 7 days</p>
+              </div>
+              <button class="btn-ghost" id="download-weekly-report-btn" type="button">Download</button>
             </div>
             <div class="settings-row">
               <div>

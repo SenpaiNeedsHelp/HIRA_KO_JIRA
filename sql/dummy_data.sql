@@ -2,7 +2,7 @@
 -- DUMMY DATA FOR HABIT TRACKER
 -- ============================================
 -- This file contains sample data for testing
--- Password for all users: password123
+-- Password for all users: password
 -- ============================================
 
 USE habit_tracker;
@@ -20,7 +20,7 @@ USE habit_tracker;
 -- ============================================
 -- INSERT USERS
 -- ============================================
--- Password: password123 (hashed with bcrypt)
+-- Password: password (hashed with bcrypt)
 INSERT INTO users (email, password_hash, name, avatar, level, xp, current_streak, best_streak, member_since, last_login) VALUES
 ('john.doe@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'John Doe', NULL, 5, 250, 12, 28, '2026-01-15 08:00:00', '2026-03-31 09:30:00'),
 ('jane.smith@email.com', '$2y$10$92IXUNpkjO0rOQ5byMi.Ye4oKoEa3Ro9llC/.og/at2.uheWG/igi', 'Jane Smith', NULL, 3, 180, 7, 15, '2026-02-01 10:00:00', '2026-03-30 18:45:00'),

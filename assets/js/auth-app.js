@@ -86,10 +86,12 @@ function setAuthMode(mode) {
 async function handleAuthSubmit(e) {
     e.preventDefault();
 
-    const email = document.getElementById('email').value.trim();
-    const password = document.getElementById('password').value;
+    const emailEl = document.getElementById('email');
+    const passwordEl = document.getElementById('password');
     const errorMsg = document.getElementById('error-msg');
     const mainBtn = document.getElementById('main-btn');
+    const email = emailEl ? emailEl.value.trim().toLowerCase() : '';
+    const password = passwordEl ? passwordEl.value : '';
 
     // Clear previous error
     errorMsg.textContent = '';

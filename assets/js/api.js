@@ -99,6 +99,10 @@ const HabitAPI = {
         return await this.request(url);
     },
 
+    async updateProfile(profileData) {
+        return await this.request('/auth/update.php', 'POST', profileData);
+    },
+
     async createHabit(habitData) {
         return await this.request('/habits/create.php', 'POST', habitData);
     },

@@ -8,6 +8,10 @@ require_once '../config/database.php';
 
 setCorsHeaders();
 
+function normalizeBoolean($value) {
+    return filter_var($value, FILTER_VALIDATE_BOOLEAN);
+}
+
 $database = new Database();
 $db = $database->getConnection();
 
@@ -26,10 +30,11 @@ $password = $data['password'];
 
 try {
     // Get user by email
-    $query = "SELECT id, email, password_hash, name, avatar, level, xp, current_streak, best_streak
-              FROM users
-              WHERE email = :email AND is_active = TRUE";
-
+    $query = "SELECT u.id, u.email, u.password_hash, u.name, u.avatar, u.level, u.xp, u.current_streak, u.best_streak, u.member_since,
+                     s.theme, s.notifications_enabled, s.weekly_report_enabled, s.notification_time, s.weekly_report_time, s.timezone
+              FROM users u
+              LEFT JOIN user_settings s ON u.id = s.user_id
+              WHERE u.email = :email AND u.is_active = TRUE";
     $stmt = $db->prepare($query);
     $stmt->bindParam(':email', $email);
     $stmt->execute();
@@ -65,6 +70,18 @@ try {
 
     // Remove password hash from response
     unset($user['password_hash']);
+
+    $settings = [
+        'theme' => $user['theme'] ?? 'auto',
+        'notifications_enabled' => normalizeBoolean($user['notifications_enabled'] ?? false),
+        'weekly_report_enabled' => normalizeBoolean($user['weekly_report_enabled'] ?? false),
+        'notification_time' => $user['notification_time'] ?? '09:00:00',
+        'weekly_report_time' => $user['weekly_report_time'] ?? '09:00:00',
+        'timezone' => $user['timezone'] ?? 'UTC'
+    ];
+
+    unset($user['theme'], $user['notifications_enabled'], $user['weekly_report_enabled'], $user['notification_time'], $user['weekly_report_time'], $user['timezone']);
+    $user['settings'] = $settings;
 
     sendResponse([
         'success' => true,
