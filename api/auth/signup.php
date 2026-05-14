@@ -39,34 +39,49 @@ try {
     $password_hash = password_hash($password, PASSWORD_BCRYPT);
     $token = generateVerificationToken();
 
-    // Insert user (NOT verified)
-    $stmt = $db->prepare("
-        INSERT INTO users (email, password_hash, name, is_verified, verification_token)
-        VALUES (:email, :password, :name, 0, :token)
-    ");
+    try {
+        // Use transaction so we can rollback if email sending fails
+        $db->beginTransaction();
 
-    $stmt->execute([
-        ':email' => $email,
-        ':password' => $password_hash,
-        ':name' => $name,
-        ':token' => $token
-    ]);
+        // Insert user (NOT verified)
+        $stmt = $db->prepare("\n            INSERT INTO users (email, password_hash, name, is_verified, verification_token)\n            VALUES (:email, :password, :name, 0, :token)\n        ");
 
-    // Send verification email
-    require_once '../config/mailer.php';
-    $verifyLink = "http://" . $_SERVER['HTTP_HOST'] . "/HIRA_KO_JIRA/api/auth/verify_email.php?token=" . $token;
-    $subject = "Verify your email - HIRA KO JIRA";
-    $message = "<h3>Welcome $name!</h3>
-                <p>Please click the link below to verify your email address:</p>
-                <p><a href='$verifyLink'>$verifyLink</a></p>";
-    
-    sendEmail($email, $subject, $message);
+        $stmt->execute([
+            ':email' => $email,
+            ':password' => $password_hash,
+            ':name' => $name,
+            ':token' => $token
+        ]);
 
-    sendResponse([
-        'success' => true,
-        'message' => 'Registered. Please check your email to verify your account.'
-    ], 201);
+        // Send verification email
+        require_once '../config/mailer.php';
+        $verifyLink = "http://" . $_SERVER['HTTP_HOST'] . "/HIRA_KO_JIRA/api/auth/verify_email.php?token=" . $token;
+        $subject = "Verify your email - HIRA KO JIRA";
+        $message = "<h3>Welcome $name!</h3>\n                <p>Please click the link below to verify your email address:</p>\n                <p><a href='$verifyLink'>$verifyLink</a></p>";
+
+        $sent = sendEmail($email, $subject, $message);
+
+        if (!$sent) {
+            // rollback user creation if email fails
+            $db->rollBack();
+            sendResponse(['success' => false, 'message' => 'Failed to send verification email. Please try again later.'], 500);
+        }
+
+        $db->commit();
+
+        sendResponse([
+            'success' => true,
+            'message' => 'Registered. Please check your email to verify your account.'
+        ], 201);
+
+    } catch (PDOException $e) {
+        if ($db->inTransaction()) {
+            $db->rollBack();
+        }
+        sendResponse(['success' => false, 'message' => 'Server error'], 500);
+    }
 
 } catch (PDOException $e) {
     sendResponse(['success' => false, 'message' => 'Server error'], 500);
 }
+

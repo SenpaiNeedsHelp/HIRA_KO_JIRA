@@ -41,13 +41,13 @@ function sendEmail($to, $subject, $message) {
         $logFile = __DIR__ . '/../logs/emails.log';
         $logContent = "====================================\n";
         $logContent .= "Time: " . date('Y-m-d H:i:s') . "\n";
-        $logContent .= "FAILED TO SEND via Mailtrap! Error: {$mail->ErrorInfo}\n";
+        $logContent .= "FAILED TO SEND via Mailtrap! Error: " . ($mail->ErrorInfo ?? $e->getMessage()) . "\n";
         $logContent .= "To: $to\n";
         $logContent .= "Subject: $subject\n";
         $logContent .= "Message:\n$message\n";
         $logContent .= "====================================\n\n";
         
         file_put_contents($logFile, $logContent, FILE_APPEND);
-        return true; // Don't break flow
+        return false; // Indicate failure to callers
     }
 }
