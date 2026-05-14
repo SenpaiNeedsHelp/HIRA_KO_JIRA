@@ -1,5 +1,6 @@
 <?php
 require_once '../config/database.php';
+require_once '../config/mailer.php';
 
 setCorsHeaders();
 $db = (new Database())->getConnection();
@@ -48,7 +49,7 @@ try {
 
     $resendCount = max(1, $resendCount + 1);
     $otpCode = str_pad((string)random_int(0, 999999), 6, '0', STR_PAD_LEFT);
-    $expiresAt = $now->modify('+15 minutes')->format('Y-m-d H:i:s');
+    $expiresAt = $now->modify('+1 minute')->format('Y-m-d H:i:s');
     $requestTimeSql = (new DateTime('now', new DateTimeZone('UTC')))->format('Y-m-d H:i:s');
 
     $update = $db->prepare('UPDATE users SET password_reset_code = :code, password_reset_expires_at = :expires, password_reset_request_time = :request_time, password_reset_resend_count = :resend_count WHERE id = :id');
@@ -60,12 +61,24 @@ try {
         ':id' => $user['id']
     ]);
 
+    // Send OTP email
+    $subject = 'Habit Tracker Password Reset OTP';
+    $message = "<h3>Password Reset Request</h3>
+                <p>Your One-Time Password (OTP) is: <strong>$otpCode</strong></p>
+                <p>This code will expire in 1 minute.</p>";
+    
+    $mailSent = sendEmail($email, $subject, $message);
+
+    if (!$mailSent) {
+        error_log("Failed to send password reset OTP to {$email}");
+        sendResponse(['success' => false, 'message' => 'Could not send OTP email. Please try again later.'], 500);
+    }
+
     sendResponse([
         'success' => true,
-        'message' => 'OTP sent. It is valid for 15 minutes.',
+        'message' => 'OTP sent to your email. It is valid for 1 minute.',
         'resend_count' => $resendCount,
-        'wait' => 50,
-        'otp' => $otpCode
+        'wait' => 50
     ]);
 } catch (PDOException $e) {
     sendResponse(['success' => false, 'message' => 'Server error'], 500);

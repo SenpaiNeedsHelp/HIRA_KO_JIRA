@@ -22,7 +22,7 @@ const HabitAPI = {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                credentials: 'same-origin'
+                credentials: 'include'
             };
 
             if (data) {

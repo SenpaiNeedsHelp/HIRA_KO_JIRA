@@ -52,14 +52,19 @@ try {
         ':token' => $token
     ]);
 
-    // 👉 Normally send email here (skipped)
-    // Example verification link:
-    // http://localhost/api/auth/verify-email.php?token=XXXX
+    // Send verification email
+    require_once '../config/mailer.php';
+    $verifyLink = "http://" . $_SERVER['HTTP_HOST'] . "/HIRA_KO_JIRA/api/auth/verify_email.php?token=" . $token;
+    $subject = "Verify your email - HIRA KO JIRA";
+    $message = "<h3>Welcome $name!</h3>
+                <p>Please click the link below to verify your email address:</p>
+                <p><a href='$verifyLink'>$verifyLink</a></p>";
+    
+    sendEmail($email, $subject, $message);
 
     sendResponse([
         'success' => true,
-        'message' => 'Registered. Please verify your email.',
-        'verification_token' => $token // remove in production
+        'message' => 'Registered. Please check your email to verify your account.'
     ], 201);
 
 } catch (PDOException $e) {

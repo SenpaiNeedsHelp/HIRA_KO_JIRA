@@ -1,0 +1,106 @@
+====================================
+Time: 2026-05-14 05:58:06
+To: api_test@example.com
+Subject: Verify your email - HIRA KO JIRA
+Message:
+<h3>Welcome API Test!</h3>
+                <p>Please click the link below to verify your email address:</p>
+                <p><a href='http://localhost/api/auth/verify_email.php?token=101312d098d9cbc5c0741ece30dc61ed4812c1a9c2fb1b76a3787ae19a943ee8'>http://localhost/api/auth/verify_email.php?token=101312d098d9cbc5c0741ece30dc61ed4812c1a9c2fb1b76a3787ae19a943ee8</a></p>
+====================================
+
+====================================
+Time: 2026-05-14 06:06:04
+To: shreyasparajuli2@gmail.com
+Subject: Verify your email - HIRA KO JIRA
+Message:
+<h3>Welcome shreyas parajuli!</h3>
+                <p>Please click the link below to verify your email address:</p>
+                <p><a href='http://localhost/HIRA_KO_JIRA/api/auth/verify_email.php?token=0627cd3d25ea2b3308a8bc93889f356e7ed1f81e083182cef63081ee1c31f8cc'>http://localhost/HIRA_KO_JIRA/api/auth/verify_email.php?token=0627cd3d25ea2b3308a8bc93889f356e7ed1f81e083182cef63081ee1c31f8cc</a></p>
+====================================
+
+====================================
+Time: 2026-05-14 06:09:19
+To: api_test2@example.com
+Subject: Verify your email - HIRA KO JIRA
+Message:
+<h3>Welcome API Test 2!</h3>
+                <p>Please click the link below to verify your email address:</p>
+                <p><a href='http://localhost/HIRA_KO_JIRA/api/auth/verify_email.php?token=9087bf2bea765eb9c39e5a9274588c5c7aa8a0441c7b0b25ea9e2bdc66a14b18'>http://localhost/HIRA_KO_JIRA/api/auth/verify_email.php?token=9087bf2bea765eb9c39e5a9274588c5c7aa8a0441c7b0b25ea9e2bdc66a14b18</a></p>
+====================================
+
+====================================
+Time: 2026-05-14 06:10:51
+To: shreyasparajuli2@gmail.com
+Subject: Habit Tracker Password Reset OTP
+Message:
+<h3>Password Reset Request</h3>
+                <p>Your One-Time Password (OTP) is: <strong>528349</strong></p>
+                <p>This code will expire in 1 minute.</p>
+====================================
+
+====================================
+Time: 2026-05-14 06:17:05
+FAILED TO SEND via Mailtrap! Error: SMTP Error: Could not authenticate. SMTP server error: QUIT command failed
+To: np03cy4s250020@gmail.com
+Subject: Verify your email - HIRA KO JIRA
+Message:
+<h3>Welcome how how!</h3>
+                <p>Please click the link below to verify your email address:</p>
+                <p><a href='http://localhost/HIRA_KO_JIRA/api/auth/verify_email.php?token=706dd6175848e799a9e816b83b7ccd6950ce88c29bb7f6909cba44cf447099d4'>http://localhost/HIRA_KO_JIRA/api/auth/verify_email.php?token=706dd6175848e799a9e816b83b7ccd6950ce88c29bb7f6909cba44cf447099d4</a></p>
+====================================
+
+====================================
+Time: 2026-05-14 06:18:00
+FAILED TO SEND via Mailtrap! Error: SMTP Error: Could not authenticate. SMTP server error: QUIT command failed
+To: NP03CY4S250020@heraldcollege.edu.np
+Subject: Verify your email - HIRA KO JIRA
+Message:
+<h3>Welcome hi vbo!</h3>
+                <p>Please click the link below to verify your email address:</p>
+                <p><a href='http://localhost/HIRA_KO_JIRA/api/auth/verify_email.php?token=dc82af10d094ff1cbc0d41703f3ad4936bdc09491cf652b8d4cf1931addf684c'>http://localhost/HIRA_KO_JIRA/api/auth/verify_email.php?token=dc82af10d094ff1cbc0d41703f3ad4936bdc09491cf652b8d4cf1931addf684c</a></p>
+====================================
+
+====================================
+Time: 2026-05-14 06:18:28
+FAILED TO SEND via Mailtrap! Error: SMTP Error: Could not authenticate. SMTP server error: QUIT command failed
+To: api_test3@example.com
+Subject: Verify your email - HIRA KO JIRA
+Message:
+<h3>Welcome API Test 3!</h3>
+                <p>Please click the link below to verify your email address:</p>
+                <p><a href='http://localhost/HIRA_KO_JIRA/api/auth/verify_email.php?token=b698817926d9af643ba8dfc740a860117cc4163b7c2c4d5be00e8a1653b4de77'>http://localhost/HIRA_KO_JIRA/api/auth/verify_email.php?token=b698817926d9af643ba8dfc740a860117cc4163b7c2c4d5be00e8a1653b4de77</a></p>
+====================================
+
+====================================
+Time: 2026-05-14 06:24:42
+FAILED TO SEND via Mailtrap! Error: SMTP Error: Could not authenticate.
+To: api_test4@example.com
+Subject: Verify your email - HIRA KO JIRA
+Message:
+<h3>Welcome API Test 4!</h3>
+                <p>Please click the link below to verify your email address:</p>
+                <p><a href='http://localhost/HIRA_KO_JIRA/api/auth/verify_email.php?token=039d2e809919f6931d24beafd4cb8e986d87d800e7e47a3a9ca0b12966979e51'>http://localhost/HIRA_KO_JIRA/api/auth/verify_email.php?token=039d2e809919f6931d24beafd4cb8e986d87d800e7e47a3a9ca0b12966979e51</a></p>
+====================================
+
+====================================
+Time: 2026-05-14 06:25:28
+FAILED TO SEND via Mailtrap! Error: SMTP Error: Could not authenticate. SMTP server error: QUIT command failed
+To: api_test5@example.com
+Subject: Verify your email - HIRA KO JIRA
+Message:
+<h3>Welcome API Test 5!</h3>
+                <p>Please click the link below to verify your email address:</p>
+                <p><a href='http://localhost/HIRA_KO_JIRA/api/auth/verify_email.php?token=ebae98e1c74984ac8f482e84a758921c121e8217810e584278d5781f5f6c7516'>http://localhost/HIRA_KO_JIRA/api/auth/verify_email.php?token=ebae98e1c74984ac8f482e84a758921c121e8217810e584278d5781f5f6c7516</a></p>
+====================================
+
+====================================
+Time: 2026-05-14 06:26:51
+FAILED TO SEND via Mailtrap API! Code: 401 | Response: {"success":false,"errors":["Unauthorized"]}
+To: api_test6@example.com
+Subject: Verify your email - HIRA KO JIRA
+Message:
+<h3>Welcome API Test 6!</h3>
+                <p>Please click the link below to verify your email address:</p>
+                <p><a href='http://localhost/HIRA_KO_JIRA/api/auth/verify_email.php?token=c743872da73bf4b729aad7434d52f63c59b1f68401e1f229a1dfce1baef673d3'>http://localhost/HIRA_KO_JIRA/api/auth/verify_email.php?token=c743872da73bf4b729aad7434d52f63c59b1f68401e1f229a1dfce1baef673d3</a></p>
+====================================
+
