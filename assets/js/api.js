@@ -22,7 +22,8 @@ const HabitAPI = {
                 headers: {
                     'Content-Type': 'application/json',
                 },
-                credentials: 'same-origin'
+                credentials: 'same-origin',
+                cache: 'no-store'
             };
 
             if (data) {
@@ -112,6 +113,38 @@ const HabitAPI = {
 
     async updateProfile(profileData) {
         return await this.request('/auth/update.php', 'POST', profileData);
+    },
+
+    async uploadAvatar(avatarDataUrlOrFile) {
+        try {
+            const url = this.baseURL + '/auth/avatar.php';
+            const form = new FormData();
+
+            if (typeof avatarDataUrlOrFile === 'string' && avatarDataUrlOrFile.startsWith('data:')) {
+                // Send as form field
+                form.append('avatar', avatarDataUrlOrFile);
+            } else if (avatarDataUrlOrFile instanceof File) {
+                form.append('avatar_file', avatarDataUrlOrFile);
+            } else {
+                // Unknown type
+                return { success: false, message: 'Invalid avatar payload' };
+            }
+
+            const resp = await fetch(url, {
+                method: 'POST',
+                body: form,
+                credentials: 'same-origin'
+            });
+
+            const result = await resp.json();
+            if (!result.success) {
+                console.error('Avatar upload failed:', result.message);
+            }
+            return result;
+        } catch (err) {
+            console.error('Avatar upload error:', err);
+            return { success: false, message: err.message };
+        }
     },
 
     async getCalendarHeatmap() {

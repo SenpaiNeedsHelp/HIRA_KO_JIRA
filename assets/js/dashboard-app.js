@@ -9,6 +9,7 @@
 let currentView = 'dashboard';
 let currentUser = null;
 let profileAvatarDraft = null;
+let profileAvatarFile = null;
 let dashboardData = null;
 let habits = [];
 let currentHabitsArchived = false;
@@ -327,6 +328,17 @@ document.addEventListener('DOMContentLoaded', async () => {
     await initializeDashboard();
     setupEventListeners();
     initScheduledPreferences();
+});
+
+window.addEventListener('pageshow', async (event) => {
+    if (!event.persisted) {
+        return;
+    }
+
+    const session = await HabitAPI.checkSession();
+    if (!session.authenticated) {
+        window.location.replace('index.html');
+    }
 });
 
 /**
@@ -784,7 +796,7 @@ function setupEventListeners() {
     if (logoutBtn) {
         logoutBtn.addEventListener('click', async () => {
             await HabitAPI.logout();
-            window.location.href = 'index.html';
+            window.location.replace('index.html');
         });
     }
 
@@ -817,6 +829,39 @@ function setupEventListeners() {
     if (avatarInput) {
         avatarInput.addEventListener('change', handleAvatarUpload);
     }
+    // Attach the same upload handler to any Save Avatar buttons (hero + edit form)
+    const avatarSaveBtns = document.querySelectorAll('.profile-avatar-save-btn, #profile-avatar-save-btn');
+    avatarSaveBtns.forEach(btn => {
+        btn.addEventListener('click', async () => {
+            if (!profileAvatarFile && !profileAvatarDraft) {
+                showToast('No avatar selected', 'error');
+                return;
+            }
+
+            showLoading();
+            try {
+                const payload = profileAvatarFile instanceof File ? profileAvatarFile : profileAvatarDraft;
+                const uploadResult = await HabitAPI.uploadAvatar(payload);
+                if (!uploadResult.success) {
+                    showToast(uploadResult.message || 'Failed to upload avatar', 'error');
+                    return;
+                }
+
+                currentUser = uploadResult.user || currentUser;
+                profileAvatarDraft = null;
+                profileAvatarFile = null;
+                // hide all avatar save buttons
+                document.querySelectorAll('.profile-avatar-save-btn, #profile-avatar-save-btn').forEach(b => b.style.display = 'none');
+                renderProfileAvatar(currentUser.avatar);
+                showToast('Avatar saved', 'success');
+            } catch (err) {
+                console.error('Avatar save error:', err);
+                showToast('Error saving avatar', 'error');
+            } finally {
+                hideLoading();
+            }
+        });
+    });
 }
 
 const NEW_HABIT_ICONS = ['💧', '🏃', '📖', '🧘', '💻', '🎨', '🎵', '🥦', '💰'];
@@ -1587,6 +1632,11 @@ function showProfileEditForm() {
     document.getElementById('edit-email').value = currentUser.email || '';
     document.getElementById('edit-password').value = '';
     document.getElementById('edit-password-confirm').value = '';
+    const currentPwdEl = document.getElementById('edit-current-password');
+    if (currentPwdEl) currentPwdEl.value = '';
+
+    const avatarSaveBtn = document.getElementById('profile-avatar-save-btn');
+    if (avatarSaveBtn) avatarSaveBtn.style.display = 'none';
 
     document.querySelector('.profile-hero').style.display = 'none';
     document.getElementById('profile-edit-card').style.display = 'block';
@@ -1616,11 +1666,14 @@ function renderProfileAvatar(avatar) {
 function hideProfileEditForm() {
     if (profileAvatarDraft) {
         profileAvatarDraft = null;
+        profileAvatarFile = null;
         const avatarInput = document.getElementById('profile-avatar-input');
         if (avatarInput) {
             avatarInput.value = '';
         }
         renderProfileAvatar(currentUser.avatar);
+        const avatarSaveBtn = document.getElementById('profile-avatar-save-btn');
+        if (avatarSaveBtn) avatarSaveBtn.style.display = 'none';
     }
 
     document.querySelector('.profile-hero').style.display = 'block';
@@ -1634,6 +1687,8 @@ function clearProfileErrors() {
     document.getElementById('err-email').textContent = '';
     document.getElementById('err-password').textContent = '';
     document.getElementById('err-password-confirm').textContent = '';
+    const cp = document.getElementById('err-current-password');
+    if (cp) cp.textContent = '';
 }
 
 function validateProfileForm() {
@@ -1643,6 +1698,7 @@ function validateProfileForm() {
     const name = document.getElementById('edit-name').value.trim();
     const email = document.getElementById('edit-email').value.trim();
     const password = document.getElementById('edit-password').value;
+    const currentPassword = document.getElementById('edit-current-password').value;
     const passwordConfirm = document.getElementById('edit-password-confirm').value;
 
     if (!name) {
@@ -1662,6 +1718,11 @@ function validateProfileForm() {
 
     if (password && password !== passwordConfirm) {
         document.getElementById('err-password-confirm').textContent = 'Passwords do not match';
+        isValid = false;
+    }
+
+    if (password && !currentPassword) {
+        document.getElementById('err-current-password').textContent = 'Current password is required to change password';
         isValid = false;
     }
 
@@ -1698,8 +1759,26 @@ async function handleProfileSave() {
     if (password) {
         updateData.password = password;
     }
+    const currentPassword = document.getElementById('edit-current-password').value;
+    if (currentPassword) {
+        updateData.current_password = currentPassword;
+    }
     if (profileAvatarDraft !== null) {
-        updateData.avatar = profileAvatarDraft;
+        // Upload avatar via separate endpoint to avoid JSON size limits
+        try {
+            const uploadResult = await HabitAPI.uploadAvatar(profileAvatarDraft);
+            if (!uploadResult.success) {
+                showToast(uploadResult.message || 'Failed to upload avatar', 'error');
+                return;
+            }
+            // server returns updated user
+            currentUser = uploadResult.user || currentUser;
+            profileAvatarDraft = null;
+        } catch (err) {
+            console.error('Avatar upload error:', err);
+            showToast('Error uploading avatar', 'error');
+            return;
+        }
     }
 
     try {
@@ -1743,7 +1822,10 @@ async function handleAvatarUpload(e) {
     reader.onload = (event) => {
         const base64 = event.target.result;
         profileAvatarDraft = base64;
+        profileAvatarFile = file;
         renderProfileAvatar(base64);
+        const avatarSaveBtn = document.getElementById('profile-avatar-save-btn');
+        if (avatarSaveBtn) avatarSaveBtn.style.display = 'inline-block';
         showToast('Avatar ready to save!', 'success');
     };
     reader.readAsDataURL(file);
